@@ -26,7 +26,7 @@ struct ProviderSwitcher: View {
                 .fill(Color.primary.opacity(0.06))
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Selettore provider")
+        .accessibilityLabel("Provider selector")
     }
 
     @ViewBuilder

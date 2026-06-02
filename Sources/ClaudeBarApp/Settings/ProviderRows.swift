@@ -50,7 +50,7 @@ struct ProviderRow: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel(self.isExpanded ? "Comprimi" : "Espandi")
+                    .accessibilityLabel(self.isExpanded ? "Collapse" : "Expand")
                 }
 
                 Toggle("", isOn: self.enabledBinding)
@@ -71,20 +71,20 @@ struct ProviderRow: View {
     // MARK: Stato testuale (sotto il nome)
 
     private var statusText: String {
-        guard self.config.enabled else { return "Disabilitato" }
+        guard self.config.enabled else { return String(localized: "Disabled") }
         // OAuth/CLI (Claude/Codex/Gemini): stato gestito da un'altra app, sola lettura.
         if self.descriptor.authKinds.contains(.oauthManaged) {
-            return "Rilevato da CLI/OAuth"
+            return String(localized: "Detected from CLI/OAuth")
         }
         // Cookie di sessione (Cursor).
         if self.descriptor.authKinds.contains(.browserCookie) {
-            return self.hasSecret ? "Cookie di sessione salvato" : "Incolla il cookie di sessione"
+            return self.hasSecret ? String(localized: "Session cookie saved") : String(localized: "Paste the session cookie")
         }
         // API key (OpenAI/Anthropic).
         if self.descriptor.authKinds.contains(.apiKey) {
-            return self.hasSecret ? "API key salvata" : "Admin API key (org) non impostata"
+            return self.hasSecret ? String(localized: "API key saved") : String(localized: "Admin API key (org) not set")
         }
-        return "Abilitato"
+        return String(localized: "Enabled")
     }
 
     private var hasConfigurableAuth: Bool {
@@ -110,21 +110,21 @@ struct ProviderRow: View {
                     provider: self.descriptor.id,
                     account: self.config.selectedAccount,
                     secretStore: self.secretStore,
-                    fieldLabel: "Cookie di sessione",
-                    placeholder: "Incolla qui il cookie di sessione",
-                    footnote: "ClaudeBar salva il cookie nel Keychain (solo questo Mac). Auto-import = post-MVP.",
+                    fieldLabel: String(localized: "Session cookie"),
+                    placeholder: String(localized: "Paste the session cookie here"),
+                    footnote: String(localized: "ClaudeBar saves the cookie in the Keychain (this Mac only). Auto-import = post-MVP."),
                     dashboardURL: self.descriptor.branding.dashboardURL,
-                    dashboardLinkLabel: "Apri \(self.descriptor.displayName)")
+                    dashboardLinkLabel: String(localized: "Open \(self.descriptor.displayName)"))
             } else if self.descriptor.authKinds.contains(.apiKey) {
                 SecretFieldAuthRow(
                     provider: self.descriptor.id,
                     account: self.config.selectedAccount,
                     secretStore: self.secretStore,
-                    fieldLabel: "Admin API key (org)",
-                    placeholder: "Admin API key dell'organizzazione",
-                    footnote: "Richiede una Admin key di account ORG. Senza, o con risposta 401/403, il provider resta visibile con un avviso.",
+                    fieldLabel: String(localized: "Admin API key (org)"),
+                    placeholder: String(localized: "Organization Admin API key"),
+                    footnote: String(localized: "Requires an ORG account Admin key. Without one, or with a 401/403 response, the provider stays visible with a warning."),
                     dashboardURL: self.descriptor.branding.dashboardURL,
-                    dashboardLinkLabel: "Dove la trovo?")
+                    dashboardLinkLabel: String(localized: "Where do I find it?"))
             }
         }
     }
@@ -143,16 +143,16 @@ struct OAuthAuthRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Autenticazione via login della CLI/app del provider.")
+            Text("Authentication via the provider's CLI/app login.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if self.descriptor.id == .claude {
-                Text("Effettua il login con Claude Code; ClaudeBar legge le credenziali in sola lettura.")
+                Text("Sign in with Claude Code; ClaudeBar reads the credentials read-only.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             if let urlString = self.descriptor.branding.dashboardURL, let url = URL(string: urlString) {
-                Link("Apri la dashboard del provider", destination: url)
+                Link("Open the provider dashboard", destination: url)
                     .font(.caption)
             }
         }
@@ -187,7 +187,7 @@ struct SecretFieldAuthRow: View {
                 SecureField(self.placeholder, text: self.$draft)
                     .textFieldStyle(.roundedBorder)
                     .font(.callout)
-                Button("Salva") { self.save() }
+                Button("Save") { self.save() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .disabled(self.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -195,14 +195,14 @@ struct SecretFieldAuthRow: View {
 
             HStack(spacing: 12) {
                 if self.hasSavedSecret {
-                    Label("Salvato in Keychain", systemImage: "checkmark.seal")
+                    Label("Saved in Keychain", systemImage: "checkmark.seal")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Button("Rimuovi") { self.remove() }
+                    Button("Remove") { self.remove() }
                         .buttonStyle(.link)
                         .controlSize(.small)
                 } else {
-                    Text("Non impostato.")
+                    Text("Not set.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -243,7 +243,7 @@ struct SecretFieldAuthRow: View {
             self.errorMessage = nil
             self.refreshState()
         } catch {
-            self.errorMessage = "Impossibile salvare nel Keychain."
+            self.errorMessage = String(localized: "Couldn't save to the Keychain.")
         }
     }
 
@@ -253,7 +253,7 @@ struct SecretFieldAuthRow: View {
             self.errorMessage = nil
             self.refreshState()
         } catch {
-            self.errorMessage = "Impossibile rimuovere dal Keychain."
+            self.errorMessage = String(localized: "Couldn't remove from the Keychain.")
         }
     }
 }

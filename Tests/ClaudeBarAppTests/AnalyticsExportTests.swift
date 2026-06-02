@@ -33,11 +33,11 @@ struct AnalyticsExportTests {
     @Test("CSV: contiene le sezioni e i totali attesi")
     func csvSectionsAndTotals() {
         let csv = AnalyticsExport.csv(from: self.sampleReport())
-        #expect(csv.contains("# Totali"))
-        #expect(csv.contains("# Per giorno"))
-        #expect(csv.contains("# Per modello"))
-        #expect(csv.contains("# Per progetto"))
-        #expect(csv.contains("token_totali,1265"))
+        #expect(csv.contains("# Totals"))
+        #expect(csv.contains("# By day"))
+        #expect(csv.contains("# By model"))
+        #expect(csv.contains("# By project"))
+        #expect(csv.contains("total_tokens,1265"))
         #expect(csv.contains("2026-06-01,1265,1000,200,50,"))
         #expect(csv.contains("claude-opus-4-8,1265,"))
         #expect(csv.hasSuffix("\n"))
@@ -73,6 +73,6 @@ struct AnalyticsExportTests {
             byDay: [], byModel: [], byProject: [], bySession: [],
             cacheEfficiency: 0, costEstimated: false, generatedAt: Date())
         let csv = AnalyticsExport.csv(from: report)
-        #expect(csv.contains("costo_usd,\n"))   // campo vuoto, non "0".
+        #expect(csv.contains("cost_usd,\n"))   // campo vuoto, non "0".
     }
 }

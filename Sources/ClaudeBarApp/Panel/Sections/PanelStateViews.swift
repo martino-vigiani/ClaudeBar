@@ -22,7 +22,7 @@ struct LimitsLoadingView: View {
         }
         .redacted(reason: .placeholder)
         .shimmer()
-        .accessibilityLabel("Caricamento limiti in corso")
+        .accessibilityLabel("Loading limits")
     }
 }
 
@@ -34,8 +34,8 @@ struct StaleBanner: View {
         InfoBanner(
             symbol: "clock.arrow.circlepath",
             tint: .secondary,
-            title: "Dati di \(minutes) min fa",
-            message: "Aggiorno…"
+            title: String(localized: "Data from \(minutes) min ago"),
+            message: String(localized: "Refreshing…")
         )
     }
     private var minutes: Int { max(1, Int(Date().timeIntervalSince(since) / 60)) }
@@ -48,7 +48,7 @@ struct LimitsErrorView: View {
     let onRetry: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.s) {
-            Label("Limiti non disponibili", systemImage: "wifi.slash")
+            Label("Limits unavailable", systemImage: "wifi.slash")
                 .font(.dsHeadline)
                 .foregroundStyle(.primary)
             Text(message)
@@ -56,7 +56,7 @@ struct LimitsErrorView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Button(action: onRetry) {
-                Text("Riprova").frame(maxWidth: .infinity)
+                Text("Retry").frame(maxWidth: .infinity)
             }
             .buttonStyle(.glass)
             .tint(.clear)
@@ -79,21 +79,21 @@ struct NoAuthView: View {
     var message: String?
 
     private var resolvedMessage: String {
-        message ?? "Effettua il login con Claude Code per vedere i tuoi limiti di sessione e settimanali."
+        message ?? String(localized: "Sign in with Claude Code to see your session and weekly limits.")
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.s) {
-            Label("Accesso a \(providerName) non rilevato", systemImage: "lock")
+            Label("\(providerName) access not detected", systemImage: "lock")
                 .font(.dsHeadline)
             Text(resolvedMessage)
                 .font(.dsCaption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DS.Spacing.s) {
-                Button("Come fare", action: onHowTo)
+                Button("How to", action: onHowTo)
                     .buttonStyle(.glass).tint(.clear)
-                Button("Riconnetti", action: onReconnect)
+                Button("Reconnect", action: onReconnect)
                     .buttonStyle(.glassProminent)
             }
             .padding(.top, DS.Spacing.xs)
@@ -111,8 +111,8 @@ struct NoSubscriptionView: View {
         InfoBanner(
             symbol: "lock.open",
             tint: .secondary,
-            title: "Limiti sessione non disponibili",
-            message: "Le finestre 5h/settimana richiedono un piano Max. Le analytics locali restano disponibili."
+            title: String(localized: "Session limits unavailable"),
+            message: String(localized: "The 5h/weekly windows require a Max plan. Local analytics stay available.")
         )
         .dsCardBezel()
     }

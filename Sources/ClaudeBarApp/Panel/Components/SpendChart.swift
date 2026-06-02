@@ -25,8 +25,8 @@ struct SpendChart: View {
                 let v = value(point)
 
                 AreaMark(
-                    x: .value("Quando", point.date),
-                    y: .value("Valore", appeared ? v : 0)
+                    x: .value("When", point.date),
+                    y: .value("Value", appeared ? v : 0)
                 )
                 .interpolationMethod(.catmullRom)
                 .foregroundStyle(
@@ -36,8 +36,8 @@ struct SpendChart: View {
                 )
 
                 LineMark(
-                    x: .value("Quando", point.date),
-                    y: .value("Valore", appeared ? v : 0)
+                    x: .value("When", point.date),
+                    y: .value("Value", appeared ? v : 0)
                 )
                 .interpolationMethod(.catmullRom)
                 .foregroundStyle(Color.primary.opacity(0.85))
@@ -45,7 +45,7 @@ struct SpendChart: View {
             }
 
             if let hovered {
-                RuleMark(x: .value("Quando", hovered.date))
+                RuleMark(x: .value("When", hovered.date))
                     .foregroundStyle(Color.primary.opacity(0.25))
                     .annotation(position: .top, alignment: .center, spacing: 4) {
                         Text(showCost ? hovered.cost.currencyString : hovered.tokens.compactString)
@@ -54,8 +54,8 @@ struct SpendChart: View {
                             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6))
                     }
                 PointMark(
-                    x: .value("Quando", hovered.date),
-                    y: .value("Valore", value(hovered))
+                    x: .value("When", hovered.date),
+                    y: .value("Value", value(hovered))
                 )
                 .foregroundStyle(Color.primary)
                 .symbolSize(60)
@@ -89,7 +89,7 @@ struct SpendChart: View {
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) { appeared = true }
         }
-        .accessibilityLabel("Andamento \(showCost ? "spesa" : "token")")
+        .accessibilityLabel(showCost ? Text("Spend trend") : Text("Token trend"))
     }
 
     private func nearestPoint(to location: CGPoint, proxy: ChartProxy, geo: GeometryProxy) -> SpendPoint? {

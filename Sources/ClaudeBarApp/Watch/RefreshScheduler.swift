@@ -27,12 +27,12 @@ enum RefreshInterval: String, Sendable, CaseIterable, Identifiable {
     /// Etichetta per le Preferenze.
     var label: String {
         switch self {
-        case .manual: "Manuale"
-        case .oneMinute: "1 minuto"
-        case .twoMinutes: "2 minuti"
-        case .fiveMinutes: "5 minuti"
-        case .fifteenMinutes: "15 minuti"
-        case .thirtyMinutes: "30 minuti"
+        case .manual: NSLocalizedString("Manual", comment: "Refresh interval option: no automatic refresh")
+        case .oneMinute: NSLocalizedString("1 minute", comment: "Refresh interval option")
+        case .twoMinutes: NSLocalizedString("2 minutes", comment: "Refresh interval option")
+        case .fiveMinutes: NSLocalizedString("5 minutes", comment: "Refresh interval option")
+        case .fifteenMinutes: NSLocalizedString("15 minutes", comment: "Refresh interval option")
+        case .thirtyMinutes: NSLocalizedString("30 minutes", comment: "Refresh interval option")
         }
     }
 }

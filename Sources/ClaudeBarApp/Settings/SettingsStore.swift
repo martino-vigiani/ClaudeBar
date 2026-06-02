@@ -13,7 +13,7 @@ enum UsageSource: String, Sendable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .auto: "Automatico"
+        case .auto: String(localized: "Automatic")
         case .oauth: "OAuth"
         case .cli: "CLI"
         }
@@ -30,8 +30,8 @@ enum GlanceNumberContent: String, Sendable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .used: "Usato"
-        case .remaining: "Rimanente"
+        case .used: String(localized: "Used")
+        case .remaining: String(localized: "Remaining")
         }
     }
 }

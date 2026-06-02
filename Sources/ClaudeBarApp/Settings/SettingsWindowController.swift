@@ -17,7 +17,7 @@ final class SettingsWindowController {
         if self.window == nil {
             let hosting = NSHostingController(rootView: SettingsRootView(settings: settings))
             let window = NSWindow(contentViewController: hosting)
-            window.title = "Impostazioni"
+            window.title = NSLocalizedString("Settings", comment: "Settings window title")
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             window.isReleasedWhenClosed = false
             window.identifier = NSUserInterfaceItemIdentifier("claudebar.settings")

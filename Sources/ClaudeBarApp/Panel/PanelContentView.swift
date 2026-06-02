@@ -137,7 +137,7 @@ struct PanelContentView<Model: PanelViewModeling>: View {
     /// la API key in Impostazioni; per Claude (o legacy) resta il messaggio OAuth di default (nil).
     private var noAuthMessage: String? {
         guard let name = model.activeProvider?.name, name != "Claude" else { return nil }
-        return "Inserisci la API key di \(name) nelle Impostazioni → Provider per vedere usage e costo."
+        return String(localized: "Enter your \(name) API key in Settings → Providers to see usage and cost.")
     }
 
     /// Sceglie il layout in base ai DATI presenti (non al provider):
@@ -177,15 +177,15 @@ private struct PreviewHost: View {
 
 #Preview("Loading") { PreviewHost(MockPanelViewModel(state: .loading)) }
 
-#Preview("Errore limiti") {
-    PreviewHost(MockPanelViewModel(state: .error(message: "Impossibile contattare Anthropic. Controlla la connessione.")))
+#Preview("Limits error") {
+    PreviewHost(MockPanelViewModel(state: .error(message: "Unable to reach Anthropic. Check your connection.")))
 }
 
 #Preview("No auth") { PreviewHost(MockPanelViewModel(state: .noAuth)) }
 
 #Preview("No subscription") { PreviewHost(MockPanelViewModel(state: .noSubscription)) }
 
-#Preview("Critico") {
+#Preview("Critical") {
     let crit = UsageWindowVM(
         kind: .session, utilization: 96,
         resetsAt: Date().addingTimeInterval(41 * 60),
@@ -197,7 +197,7 @@ private struct PreviewHost: View {
 }
 
 // Multi-provider (MP-6): provider a consumo (usage+costo+credito) con switcher attivo.
-#Preview("API a consumo + switcher") {
+#Preview("Usage-based API + switcher") {
     PreviewHost(MockPanelViewModel(
         state: .ok,
         account: AccountVM(name: "platform.openai", plan: "pay-as-you-go"),

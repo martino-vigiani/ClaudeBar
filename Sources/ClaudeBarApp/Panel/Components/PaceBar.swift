@@ -27,7 +27,7 @@ struct PaceBar: View {
             footer
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("Ritmo \(window.kind.eyebrow)"))
+        .accessibilityLabel(Text("Pace \(window.kind.eyebrow)"))
         .accessibilityValue(Text(paceAccessibilityValue))
     }
 
@@ -124,11 +124,11 @@ struct PaceBar: View {
 
     // MARK: ETA formatting
 
-    private func etaText(_ pace: PaceInfo) -> String {
+    private func etaText(_ pace: PaceInfo) -> LocalizedStringKey {
         guard let eta = pace.etaToEmpty else {
-            return "Arrivi al reset con margine"
+            return "You'll reach the reset with margin"
         }
-        return "esaurisci tra ~\(Self.compactDuration(eta))"
+        return "runs out in ~\(Self.compactDuration(eta))"
     }
 
     /// "1h 39m", "47m", "2h".
@@ -141,19 +141,17 @@ struct PaceBar: View {
         return "\(m)m"
     }
 
-    private var paceAccessibilityValue: String {
-        guard let pace = window.pace else { return "\(Int(used.rounded())) percento usato" }
-        let etaPart: String
+    private var paceAccessibilityValue: LocalizedStringKey {
+        guard let pace = window.pace else { return "\(Int(used.rounded())) percent used" }
         if let eta = pace.etaToEmpty {
-            etaPart = "a questo ritmo esaurisci tra \(Self.compactDuration(eta))"
+            return "\(Int(used.rounded())) percent used, \(pace.status.label), at this pace you run out in \(Self.compactDuration(eta))"
         } else {
-            etaPart = "arrivi al reset con margine"
+            return "\(Int(used.rounded())) percent used, \(pace.status.label), you'll reach the reset with margin"
         }
-        return "\(Int(used.rounded())) percento usato, \(pace.status.label), \(etaPart)"
     }
 }
 
-#Preview("PaceBar — sopra / sotto ritmo") {
+#Preview("PaceBar — over / under pace") {
     VStack(spacing: 28) {
         PaceBar(window: .init(
             kind: .session, utilization: 62, resetsAt: .now,

@@ -22,10 +22,10 @@ struct NotificationsSettingsSection: View {
 
     private var masterGroup: some View {
         SettingsGroup(
-            "Suono",
-            footnote: "Con il suono disattivato le notifiche arrivano in modo silenzioso.")
+            "Sound",
+            footnote: "With sound off, notifications arrive silently.")
         {
-            Toggle("Riproduci un suono", isOn: self.$settings.notificationSound)
+            Toggle("Play a sound", isOn: self.$settings.notificationSound)
                 .toggleStyle(.switch)
         }
     }
@@ -34,10 +34,10 @@ struct NotificationsSettingsSection: View {
 
     private var sessionGroup: some View {
         SettingsGroup(
-            "Sessione 5h",
-            footnote: "Una sola notifica per soglia per ciclo: alla scadenza della finestra le soglie si riarmano.")
+            "5h session",
+            footnote: "One notification per threshold per cycle: when the window expires the thresholds rearm.")
         {
-            Toggle("Avvisa al raggiungimento delle soglie", isOn: self.$settings.notifyOnSessionThreshold)
+            Toggle("Notify when thresholds are reached", isOn: self.$settings.notifyOnSessionThreshold)
                 .toggleStyle(.switch)
 
             if self.settings.notifyOnSessionThreshold {
@@ -51,10 +51,10 @@ struct NotificationsSettingsSection: View {
 
     private var weeklyGroup: some View {
         SettingsGroup(
-            "Settimanale",
-            footnote: "Quando il limite settimanale si azzera ricevi una notifica di reset.")
+            "Weekly",
+            footnote: "When the weekly limit resets you get a reset notification.")
         {
-            Toggle("Festeggia il reset settimanale", isOn: self.$settings.notifyOnWeeklyReset)
+            Toggle("Celebrate the weekly reset", isOn: self.$settings.notifyOnWeeklyReset)
                 .toggleStyle(.switch)
         }
     }
@@ -84,12 +84,12 @@ private struct ThresholdEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.s) {
-            Text("Soglie di avviso (% usato)")
+            Text("Warning thresholds (% used)")
                 .font(.dsCaption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
             if self.thresholds.isEmpty {
-                Text("Nessuna soglia: non riceverai avvisi di sessione finché non ne aggiungi una.")
+                Text("No thresholds: you won't get session warnings until you add one.")
                     .font(.dsCaption)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -113,7 +113,7 @@ private struct ThresholdEditor: View {
 
     private var addRow: some View {
         HStack(spacing: DS.Spacing.s) {
-            TextField("es. 80", text: self.$draft)
+            TextField("e.g. 80", text: self.$draft)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 80)
                 .focused(self.$fieldFocused)
@@ -121,7 +121,7 @@ private struct ThresholdEditor: View {
             Text("%")
                 .font(.dsBody)
                 .foregroundStyle(.secondary)
-            Button("Aggiungi") { self.commitDraft() }
+            Button("Add") { self.commitDraft() }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .disabled(self.pendingValue == nil)
@@ -161,7 +161,7 @@ private struct ThresholdChip: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Rimuovi soglia \(self.value)%")
+            .accessibilityLabel("Remove threshold \(self.value)%")
         }
         .padding(.horizontal, DS.Spacing.s)
         .padding(.vertical, 4)

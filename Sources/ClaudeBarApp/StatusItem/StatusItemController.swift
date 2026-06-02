@@ -138,17 +138,26 @@ final class StatusItemController {
     private func showQuickMenu() {
         let menu = NSMenu()
 
-        let refresh = NSMenuItem(title: "Aggiorna", action: #selector(self.menuRefresh), keyEquivalent: "r")
+        let refresh = NSMenuItem(
+            title: NSLocalizedString("Refresh", comment: "Quick menu item: refresh limits/usage now"),
+            action: #selector(self.menuRefresh),
+            keyEquivalent: "r")
         refresh.target = self
         menu.addItem(refresh)
 
         menu.addItem(.separator())
 
-        let prefs = NSMenuItem(title: "Preferenze…", action: #selector(self.menuPreferences), keyEquivalent: ",")
+        let prefs = NSMenuItem(
+            title: NSLocalizedString("Preferences…", comment: "Quick menu item: open the Preferences window"),
+            action: #selector(self.menuPreferences),
+            keyEquivalent: ",")
         prefs.target = self
         menu.addItem(prefs)
 
-        let quit = NSMenuItem(title: "Esci da \(AppInfo.displayName)", action: #selector(self.menuQuit), keyEquivalent: "q")
+        let quit = NSMenuItem(
+            title: String(format: NSLocalizedString("Quit %@", comment: "Quick menu item: quit the app; %@ is the app name"), AppInfo.displayName),
+            action: #selector(self.menuQuit),
+            keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
 

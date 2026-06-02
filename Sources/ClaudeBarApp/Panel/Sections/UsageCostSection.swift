@@ -17,19 +17,19 @@ struct UsageCostSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.m) {
-            EyebrowTag(text: "USO A CONSUMO", symbol: "gauge.with.dots.needle.bottom.50percent")
+            EyebrowTag(text: String(localized: "USAGE-BASED"), symbol: "gauge.with.dots.needle.bottom.50percent")
 
             // KPI: costo oggi + costo mese.
             HStack(spacing: DS.Spacing.m) {
                 CostTile(
-                    title: "Costo oggi",
+                    title: String(localized: "Cost today"),
                     value: Self.currencyText(self.cost.today?.costUSD, code: self.cost.currencyCode),
-                    footnote: (self.cost.costEstimated && self.cost.showCostDisclaimer) ? "stima API-equivalente" : "dati provider",
+                    footnote: (self.cost.costEstimated && self.cost.showCostDisclaimer) ? String(localized: "API-equivalent estimate") : String(localized: "provider data"),
                     symbol: "dollarsign.circle")
                 CostTile(
-                    title: "Questo mese",
+                    title: String(localized: "This month"),
                     value: Self.currencyText(self.cost.month?.costUSD, code: self.cost.currencyCode),
-                    footnote: "30 giorni",
+                    footnote: String(localized: "30 days"),
                     symbol: "calendar")
             }
 
@@ -50,7 +50,7 @@ struct UsageCostSection: View {
 
             // Per modello (riusa una disclosure leggera).
             if !self.cost.byModel.isEmpty {
-                CostBreakdownDisclosure(title: "Per modello", items: self.cost.byModel, showCost: self.showCost)
+                CostBreakdownDisclosure(title: String(localized: "By model"), items: self.cost.byModel, showCost: self.showCost)
             }
         }
     }
@@ -58,7 +58,7 @@ struct UsageCostSection: View {
     private var chartCard: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.s) {
             HStack {
-                Text(self.showCost ? "Spesa nel tempo" : "Token nel tempo")
+                Text(self.showCost ? "Spend over time" : "Tokens over time")
                     .font(.dsHeadline)
                 Spacer()
                 Button {
@@ -74,7 +74,7 @@ struct UsageCostSection: View {
             SpendChart(series: self.cost.series, showCost: self.showCost)
                 .frame(height: 96)
             if self.cost.costEstimated, self.cost.showCostDisclaimer {
-                Text("Stima API-equivalente: alcuni costi sono stimati dalla tabella prezzi locale.")
+                Text("API-equivalent estimate: some costs are estimated from the local price table.")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.tertiary)
             }
@@ -126,7 +126,7 @@ private struct CreditsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.s) {
             HStack {
-                EyebrowTag(text: "CREDITO RESIDUO", symbol: "creditcard")
+                EyebrowTag(text: String(localized: "CREDIT REMAINING"), symbol: "creditcard")
                 Spacer()
                 Text(self.balanceText)
                     .font(.dsMono)
@@ -174,6 +174,7 @@ private struct SpendLimitCard: View {
                     .font(.dsCaption)
                     .foregroundStyle(.secondary)
             }
+            // NB: il fallback "Budget" sotto è uguale in EN/IT.
         }
         .padding(DS.Spacing.m)
         .dsCardBezel()
@@ -224,7 +225,7 @@ private struct CostBreakdownDisclosure: View {
 
             if self.open {
                 if self.items.isEmpty {
-                    Text("Nessun dato nel periodo")
+                    Text("No data in this period")
                         .font(.dsCaption)
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -266,7 +267,7 @@ private struct CostBreakdownDisclosure: View {
         .onTapGesture { withAnimation(DS.Motion.soft) { self.open.toggle() } }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel("\(self.title), \(self.open ? "espanso" : "compresso")")
+        .accessibilityLabel(self.open ? Text("\(self.title), expanded") : Text("\(self.title), collapsed"))
         .animation(DS.Motion.soft, value: self.open)
     }
 }
@@ -285,7 +286,7 @@ private struct CostBreakdownDisclosure: View {
         BreakdownItem(label: "gpt-4o-mini", cost: 12.1, tokens: 1_400_000, symbol: "cube"),
     ]
     let spendLimit = SpendLimitVM(
-        used: 18.40, limit: 50, currency: "USD", period: "Ciclo di fatturazione",
+        used: 18.40, limit: 50, currency: "USD", period: "Billing cycle",
         resetsAt: Date().addingTimeInterval(12 * 86400))
     return UsageCostSection(
         cost: UsageCostVM(

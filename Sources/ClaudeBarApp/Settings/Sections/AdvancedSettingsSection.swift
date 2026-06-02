@@ -54,17 +54,17 @@ struct AdvancedSettingsSection: View {
 
     private var dataLocationGroup: some View {
         SettingsGroup(
-            "Posizione dei dati",
-            footnote: "Sola lettura. I transcript sono prodotti da Claude Code; ClaudeBar li legge soltanto. La cache vive in Application Support.")
+            "Data location",
+            footnote: "Read-only. Transcripts are produced by Claude Code; ClaudeBar only reads them. The cache lives in Application Support.")
         {
             ForEach(Self.transcriptRootPaths, id: \.self) { path in
-                Self.pathRow(title: "Transcript", path: path)
+                Self.pathRow(title: String(localized: "Transcript"), path: path)
             }
             Divider()
-            Self.pathRow(title: "Cache app", path: AppPaths.appSupportDir().path)
+            Self.pathRow(title: String(localized: "App cache"), path: AppPaths.appSupportDir().path)
             HStack {
                 Spacer()
-                Button("Apri in Finder") {
+                Button("Open in Finder") {
                     NSWorkspace.shared.activateFileViewerSelecting([AppPaths.appSupportDir()])
                 }
                 .buttonStyle(.bordered)
@@ -97,14 +97,14 @@ struct AdvancedSettingsSection: View {
 
     private var indexGroup: some View {
         SettingsGroup(
-            "Indice analytics",
-            footnote: "«Ricostruisci» riparsa tutti i transcript (più lento). «Azzera» elimina prima la cache su disco e poi la rigenera da zero. I transcript originali non vengono toccati.")
+            "Analytics index",
+            footnote: "“Rebuild” reparses all transcripts (slower). “Clear” first deletes the on-disk cache, then regenerates it from scratch. The original transcripts are not touched.")
         {
             HStack(spacing: DS.Spacing.s) {
                 Button {
                     self.runIndexOperation(.rebuilding)
                 } label: {
-                    self.indexButtonLabel("Ricostruisci indice", busy: self.indexTask == .rebuilding)
+                    self.indexButtonLabel(String(localized: "Rebuild index"), busy: self.indexTask == .rebuilding)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -113,22 +113,22 @@ struct AdvancedSettingsSection: View {
                 Button(role: .destructive) {
                     self.confirmingClearCache = true
                 } label: {
-                    self.indexButtonLabel("Azzera cache indice", busy: self.indexTask == .clearing)
+                    self.indexButtonLabel(String(localized: "Clear index cache"), busy: self.indexTask == .clearing)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .disabled(self.indexTask != nil)
                 .confirmationDialog(
-                    "Azzerare la cache dell'indice?",
+                    "Clear the index cache?",
                     isPresented: self.$confirmingClearCache,
                     titleVisibility: .visible)
                 {
-                    Button("Azzera e ricostruisci", role: .destructive) {
+                    Button("Clear and rebuild", role: .destructive) {
                         self.runIndexOperation(.clearing)
                     }
-                    Button("Annulla", role: .cancel) {}
+                    Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("La cache su disco verrà eliminata e ricostruita dai transcript. L'operazione non cancella i tuoi transcript.")
+                    Text("The on-disk cache will be deleted and rebuilt from the transcripts. This operation doesn't delete your transcripts.")
                 }
 
                 Spacer()
@@ -158,10 +158,10 @@ struct AdvancedSettingsSection: View {
 
     private var exportGroup: some View {
         SettingsGroup(
-            "Esporta analytics",
-            footnote: "Salva il report corrente come file. CSV per i fogli di calcolo, JSON per il dato completo.")
+            "Export analytics",
+            footnote: "Save the current report as a file. CSV for spreadsheets, JSON for the complete data.")
         {
-            Picker("Formato", selection: self.$exportFormat) {
+            Picker("Format", selection: self.$exportFormat) {
                 ForEach(ExportFormat.allCases) { format in
                     Text(format.label).tag(format)
                 }
@@ -169,7 +169,7 @@ struct AdvancedSettingsSection: View {
             .pickerStyle(.segmented)
 
             HStack {
-                Button("Esporta…") { self.runExport() }
+                Button("Export…") { self.runExport() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 Spacer()
@@ -188,15 +188,15 @@ struct AdvancedSettingsSection: View {
 
     private var diagnosticsGroup: some View {
         SettingsGroup(
-            "Diagnostica",
-            footnote: "Copia negli appunti un riepilogo tecnico (versione, percorsi, conteggi e log recenti). Utile per capire un problema; nessun dato viene inviato da nessuna parte.")
+            "Diagnostics",
+            footnote: "Copies a technical summary to the clipboard (version, paths, counts and recent logs). Useful for understanding a problem; no data is sent anywhere.")
         {
             HStack {
                 Button {
                     self.copyDiagnostics()
                 } label: {
                     Label(
-                        self.diagnosticsCopied ? "Copiato" : "Copia diagnostica",
+                        self.diagnosticsCopied ? "Copied" : "Copy diagnostics",
                         systemImage: self.diagnosticsCopied ? "checkmark" : "doc.on.clipboard")
                 }
                 .buttonStyle(.bordered)
@@ -211,27 +211,27 @@ struct AdvancedSettingsSection: View {
     private var resetGroup: some View {
         SettingsGroup(
             "Reset",
-            footnote: "Riporta tutte le impostazioni ai valori di default. Le credenziali salvate nel portachiavi (chiavi API, cookie) NON vengono toccate.")
+            footnote: "Returns all settings to their default values. The credentials saved in the keychain (API keys, cookies) are NOT touched.")
         {
             HStack {
                 Button(role: .destructive) {
                     self.confirmingReset = true
                 } label: {
-                    Text("Reset di tutte le impostazioni")
+                    Text("Reset all settings")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .confirmationDialog(
-                    "Ripristinare le impostazioni di default?",
+                    "Restore the default settings?",
                     isPresented: self.$confirmingReset,
                     titleVisibility: .visible)
                 {
-                    Button("Ripristina i default", role: .destructive) {
+                    Button("Restore defaults", role: .destructive) {
                         self.settings.resetToDefaults()
                     }
-                    Button("Annulla", role: .cancel) {}
+                    Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("Aspetto, soglie, notifiche, intervallo di refresh e tutte le altre preferenze tornano ai valori iniziali. I segreti nel portachiavi restano.")
+                    Text("Appearance, thresholds, notifications, refresh interval and all other preferences return to their initial values. The secrets in the keychain remain.")
                 }
                 Spacer()
             }
@@ -243,8 +243,8 @@ struct AdvancedSettingsSection: View {
     private func runIndexOperation(_ operation: IndexOperation) {
         self.indexTask = operation
         self.indexMessage = operation == .rebuilding
-            ? "Ricostruzione dell'indice in corso…"
-            : "Azzeramento e ricostruzione in corso…"
+            ? String(localized: "Rebuilding the index…")
+            : String(localized: "Clearing and rebuilding…")
         // Rispetta la preferenza Analytics → il report ricostruito è coerente col pannello.
         let includeSubagents = self.settings.includeSubagentsInAnalytics
         Task {
@@ -258,7 +258,7 @@ struct AdvancedSettingsSection: View {
                 }
                 self.indexMessage = Self.indexSummary(report)
             } catch {
-                self.indexMessage = "Operazione non riuscita: \(error.localizedDescription)"
+                self.indexMessage = String(localized: "Operation failed: \(error.localizedDescription)")
             }
             self.indexTask = nil
         }
@@ -267,7 +267,7 @@ struct AdvancedSettingsSection: View {
     private static func indexSummary(_ report: AnalyticsReport) -> String {
         let tokens = Self.compactNumber(report.totals.totalTokens)
         let days = report.byDay.count
-        return "Indice aggiornato: \(tokens) token su \(days) giorn\(days == 1 ? "o" : "i")."
+        return String(localized: "Index updated: \(tokens) tokens across \(days) day(s).")
     }
 
     // MARK: - Export (NSSavePanel → file CSV/JSON)
@@ -277,7 +277,7 @@ struct AdvancedSettingsSection: View {
         let format = self.exportFormat
         Task {
             guard let report = await self.maintenance.currentReport() else {
-                self.exportError = "Nessun dato da esportare: prova prima a ricostruire l'indice."
+                self.exportError = String(localized: "No data to export: try rebuilding the index first.")
                 return
             }
             let payload: String
@@ -285,7 +285,7 @@ struct AdvancedSettingsSection: View {
             case .csv: payload = AnalyticsExport.csv(from: report)
             case .json:
                 guard let json = AnalyticsExport.json(from: report) else {
-                    self.exportError = "Impossibile serializzare il report in JSON."
+                    self.exportError = String(localized: "Couldn't serialize the report to JSON.")
                     return
                 }
                 payload = json
@@ -300,12 +300,12 @@ struct AdvancedSettingsSection: View {
         panel.allowedContentTypes = [format.utType]
         panel.nameFieldStringValue = format.defaultFilename
         panel.canCreateDirectories = true
-        panel.title = "Esporta analytics"
+        panel.title = NSLocalizedString("Export analytics", comment: "Save panel title for analytics export")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try payload.data(using: .utf8)?.write(to: url, options: .atomic)
         } catch {
-            self.exportError = "Salvataggio non riuscito: \(error.localizedDescription)"
+            self.exportError = String(localized: "Save failed: \(error.localizedDescription)")
         }
     }
 

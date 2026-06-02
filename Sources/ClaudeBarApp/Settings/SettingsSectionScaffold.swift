@@ -46,11 +46,11 @@ struct SettingsSectionScaffold<Content: View>: View {
 /// i layout interni delle sezioni (divisori, chip, righe custom) restano invariati: cambia solo
 /// la cornice, che ora è quella di sistema. Usare per ogni blocco di una sezione.
 struct SettingsGroup<Content: View>: View {
-    let title: String?
-    let footnote: String?
+    let title: LocalizedStringKey?
+    let footnote: LocalizedStringKey?
     @ViewBuilder var content: Content
 
-    init(_ title: String? = nil, footnote: String? = nil, @ViewBuilder content: () -> Content) {
+    init(_ title: LocalizedStringKey? = nil, footnote: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
         self.footnote = footnote
         self.content = content()
@@ -80,11 +80,11 @@ struct SettingsGroup<Content: View>: View {
 /// Riga "etichetta a sinistra, controllo a destra" con didascalia opzionale, resa con
 /// `LabeledContent` (allineamento nativo macOS). La didascalia diventa la label secondaria.
 struct SettingsRow<Control: View>: View {
-    let title: String
-    let caption: String?
+    let title: LocalizedStringKey
+    let caption: LocalizedStringKey?
     @ViewBuilder var control: Control
 
-    init(_ title: String, caption: String? = nil, @ViewBuilder control: () -> Control) {
+    init(_ title: LocalizedStringKey, caption: LocalizedStringKey? = nil, @ViewBuilder control: () -> Control) {
         self.title = title
         self.caption = caption
         self.control = control()
@@ -114,10 +114,10 @@ struct SettingsSectionPlaceholder: View {
     var body: some View {
         SettingsSectionScaffold(section: self.section) {
             SettingsGroup {
-                Label("Sezione in arrivo", systemImage: "hammer")
+                Label("Section coming soon", systemImage: "hammer")
                     .font(.dsBody)
                     .foregroundStyle(.secondary)
-                Text("I controlli di «\(self.section.title)» vengono agganciati in questa sezione.")
+                Text("The controls for “\(self.section.title)” are wired up in this section.")
                     .font(.dsCaption)
                     .foregroundStyle(.tertiary)
             }

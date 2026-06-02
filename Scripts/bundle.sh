@@ -66,6 +66,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <dict>
     <key>CFBundleName</key><string>${PRODUCT_NAME}</string>
     <key>CFBundleDisplayName</key><string>${DISPLAY_NAME}</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array><string>en</string><string>it</string></array>
     <key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
     <key>CFBundleExecutable</key><string>${PRODUCT_NAME}</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>

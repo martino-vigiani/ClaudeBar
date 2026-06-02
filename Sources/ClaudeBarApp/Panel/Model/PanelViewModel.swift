@@ -22,10 +22,10 @@ enum WindowKind: Sendable, Hashable {
 
     var eyebrow: String {
         switch self {
-        case .session: "SESSIONE 5H"
-        case .weekly: "QUESTA SETTIMANA"
-        case .weeklyOpus: "CAP OPUS"
-        case .weeklySonnet: "CAP SONNET"
+        case .session: String(localized: "5H SESSION")
+        case .weekly: String(localized: "THIS WEEK")
+        case .weeklyOpus: String(localized: "OPUS CAP")
+        case .weeklySonnet: String(localized: "SONNET CAP")
         }
     }
 
@@ -46,9 +46,9 @@ enum PaceStatus: Sendable {
 
     var label: String {
         switch self {
-        case .onTrack: "in linea"
-        case .over: "sopra ritmo"
-        case .under: "sotto ritmo"
+        case .onTrack: String(localized: "on track")
+        case .over: String(localized: "over pace")
+        case .under: String(localized: "under pace")
         }
     }
     /// Colore dello stato di ritmo. Semantica UX (coerente con la scala % usato):
@@ -111,9 +111,9 @@ enum AnalyticsRange: String, Sendable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .today: "Oggi"
-        case .week: "7g"
-        case .month: "30g"
+        case .today: String(localized: "Today")
+        case .week: String(localized: "7d")
+        case .month: String(localized: "30d")
         }
     }
 }

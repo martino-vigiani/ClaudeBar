@@ -147,7 +147,7 @@ struct ResetCountdown: View {
     private func relative(_ secs: TimeInterval) -> String {
         let t = Int(secs)
         let d = t / 86400, h = (t % 86400) / 3600, m = (t % 3600) / 60
-        if d > 0 { return "\(d)g \(h)h" }
+        if d > 0 { return "\(d)d \(h)h" }
         if h > 0 { return "\(h)h \(m)m" }
         return "\(m)m"
     }
@@ -160,15 +160,15 @@ struct ResetCountdown: View {
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "it_IT")
-        f.dateFormat = "HH:mm"
+        f.locale = .current
+        f.setLocalizedDateFormatFromTemplate("HH:mm")
         return f
     }()
 
     private static let dayTimeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "it_IT")
-        f.dateFormat = "EEE HH:mm"
+        f.locale = .current
+        f.setLocalizedDateFormatFromTemplate("EEE HH:mm")
         return f
     }()
 }

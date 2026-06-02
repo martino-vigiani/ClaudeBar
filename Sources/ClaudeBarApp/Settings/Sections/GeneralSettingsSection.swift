@@ -21,8 +21,8 @@ struct GeneralSettingsSection: View {
     // MARK: Avvio
 
     private var startupGroup: some View {
-        SettingsGroup("Avvio") {
-            Toggle("Avvia al login", isOn: self.$settings.launchAtLogin)
+        SettingsGroup("Startup") {
+            Toggle("Launch at login", isOn: self.$settings.launchAtLogin)
                 .toggleStyle(.switch)
         }
     }
@@ -31,18 +31,18 @@ struct GeneralSettingsSection: View {
 
     private var refreshGroup: some View {
         SettingsGroup(
-            "Aggiornamento",
-            footnote: "Con «Manuale» l'app non aggiorna i limiti da sola: usa il pulsante di refresh nel pannello.")
+            "Updates",
+            footnote: "With “Manual” the app doesn't refresh the limits on its own: use the refresh button in the panel.")
         {
-            Picker("Aggiorna i limiti ogni", selection: self.$settings.refreshInterval) {
+            Picker("Refresh the limits every", selection: self.$settings.refreshInterval) {
                 ForEach(RefreshInterval.allCases) { interval in
                     Text(interval.label).tag(interval)
                 }
             }
             Divider()
-            Toggle("Aggiorna all'apertura del pannello", isOn: self.$settings.refreshOnPanelOpen)
+            Toggle("Refresh when the panel opens", isOn: self.$settings.refreshOnPanelOpen)
                 .toggleStyle(.switch)
-            Toggle("Aggiorna al risveglio dal sleep", isOn: self.$settings.refreshOnWake)
+            Toggle("Refresh on wake from sleep", isOn: self.$settings.refreshOnWake)
                 .toggleStyle(.switch)
         }
     }
@@ -50,8 +50,8 @@ struct GeneralSettingsSection: View {
     // MARK: Aspetto
 
     private var appearanceGroup: some View {
-        SettingsGroup("Aspetto") {
-            Picker("Tema", selection: self.$settings.appearance) {
+        SettingsGroup("Appearance") {
+            Picker("Theme", selection: self.$settings.appearance) {
                 ForEach(AppAppearance.allCases) { mode in
                     Label(mode.label, systemImage: mode.symbolName).tag(mode)
                 }
