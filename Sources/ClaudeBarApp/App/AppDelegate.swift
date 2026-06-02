@@ -68,6 +68,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let adapter = AppModelPanelAdapter(model)
             return AnyView(PanelContentView(model: adapter))
         }
+        // Scorciatoia cmd+, dentro il pannello → apre le Preferenze (e chiude il pannello).
+        panelHost.onPreferences = { [weak model] in model?.openPreferences() }
 
         // 5) StatusItemController + install.
         let statusController = StatusItemController(

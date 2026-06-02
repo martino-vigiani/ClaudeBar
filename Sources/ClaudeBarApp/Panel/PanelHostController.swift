@@ -13,6 +13,9 @@ final class PanelHostController {
     private var localKeyMonitor: Any?
     private let makeRootView: @MainActor () -> AnyView
 
+    /// Azione "apri Preferenze" (scorciatoia cmd+, mentre il pannello è key). Iniettata dall'AppDelegate.
+    var onPreferences: (@MainActor () -> Void)?
+
     /// `makeRootView`: factory della root SwiftUI (la fornisce l'AppModel/adapter, vedi wiring).
     init(makeRootView: @escaping @MainActor () -> AnyView) {
         self.makeRootView = makeRootView
@@ -118,6 +121,11 @@ final class PanelHostController {
         self.localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             if event.keyCode == 53 { // Esc
                 Task { @MainActor in self?.close() }
+                return nil
+            }
+            // cmd+, → apri Preferenze (onPreferences chiude il pannello e apre la finestra Settings).
+            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "," {
+                Task { @MainActor in self?.onPreferences?() }
                 return nil
             }
             return event

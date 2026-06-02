@@ -21,45 +21,30 @@ import SwiftUI
 //         }
 //     }
 
-/// Guscio standard di una sezione: titolo + sottotitolo opzionale, poi il contenuto scrollabile.
-/// Vetro NEUTRO (DECISIONS §3): nessuna tinta. Lo sfondo della finestra è fornito dallo shell.
+/// Guscio standard di una sezione: `Form` in stile grouped (look nativo macOS 26), titolo nella
+/// titlebar via `navigationTitle`. Vetro NEUTRO (DECISIONS §3): nessuna tinta; lo stile grouped
+/// fornisce inset, materiali e divisori di sistema. Niente header manuale → il titolo NON è più
+/// duplicato (prima compariva sia in titlebar sia come testo grande nel contenuto).
 struct SettingsSectionScaffold<Content: View>: View {
     let section: SettingsSection
     @ViewBuilder var content: Content
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DS.Spacing.l) {
-                self.header
-                self.content
-            }
-            .padding(DS.Spacing.xl)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        Form {
+            self.content
         }
-        .scrollBounceBehavior(.basedOnSize)
+        .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(self.section.title)
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
-            Text(self.section.title)
-                .font(.system(size: 20, weight: .semibold))
-            if let subtitle = self.section.subtitle {
-                Text(subtitle)
-                    .font(.dsBody)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
 // MARK: - Gruppo di opzioni
 
-/// Gruppo etichettato di controlli, reso come `GroupBox` su materiale neutro. Riga-titolo
-/// opzionale + contenuto in `VStack`. Sostituisce le `Section` del vecchio `Form` mantenendo
-/// la coerenza con il DesignSystem (DS.*). Usare per ogni blocco di una sezione.
+/// Gruppo etichettato di controlli, reso come `Section` di un `Form` grouped: titolo → header
+/// nativo, footnote → footer nativo. Il contenuto resta in un `VStack` (una riga del Form) così
+/// i layout interni delle sezioni (divisori, chip, righe custom) restano invariati: cambia solo
+/// la cornice, che ora è quella di sistema. Usare per ogni blocco di una sezione.
 struct SettingsGroup<Content: View>: View {
     let title: String?
     let footnote: String?
@@ -72,27 +57,19 @@ struct SettingsGroup<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.s) {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Spacing.m) {
+                self.content
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } header: {
             if let title {
-                Text(title.uppercased())
-                    .font(.dsEyebrow)
-                    .tracking(0.6)
-                    .foregroundStyle(.secondary)
-                    .padding(.leading, DS.Spacing.xs)
+                Text(title)
             }
-            GroupBox {
-                VStack(alignment: .leading, spacing: DS.Spacing.m) {
-                    self.content
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(DS.Spacing.xs)
-            }
+        } footer: {
             if let footnote {
                 Text(footnote)
-                    .font(.dsCaption)
-                    .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, DS.Spacing.xs)
             }
         }
     }
@@ -100,8 +77,8 @@ struct SettingsGroup<Content: View>: View {
 
 // MARK: - Riga con etichetta + controllo a destra
 
-/// Riga orizzontale "etichetta a sinistra, controllo a destra" con didascalia opzionale.
-/// Helper presentazionale per uniformare le righe dentro un `SettingsGroup`.
+/// Riga "etichetta a sinistra, controllo a destra" con didascalia opzionale, resa con
+/// `LabeledContent` (allineamento nativo macOS). La didascalia diventa la label secondaria.
 struct SettingsRow<Control: View>: View {
     let title: String
     let caption: String?
@@ -114,21 +91,15 @@ struct SettingsRow<Control: View>: View {
     }
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.m) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(self.title)
-                    .font(.dsBody)
-                if let caption {
-                    Text(caption)
-                        .font(.dsCaption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Spacer(minLength: DS.Spacing.m)
+        LabeledContent {
             self.control
+        } label: {
+            Text(self.title)
+            if let caption {
+                Text(caption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

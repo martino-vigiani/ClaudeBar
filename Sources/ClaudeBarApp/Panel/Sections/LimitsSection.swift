@@ -153,12 +153,24 @@ struct ResetCountdown: View {
     }
 
     private var absolute: String {
-        let f = DateFormatter()
-        // Sessione: ora del giorno. Settimana: giorno + ora.
-        f.locale = Locale(identifier: "it_IT")
-        f.dateFormat = (kind == .session) ? "HH:mm" : "EEE HH:mm"
-        return f.string(from: resetsAt)
+        // Sessione: ora del giorno. Settimana: giorno + ora. Formatter STATICI: allocare un
+        // `DateFormatter` è costoso e questa computed gira a ogni body eval.
+        (kind == .session ? Self.timeFormatter : Self.dayTimeFormatter).string(from: resetsAt)
     }
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "it_IT")
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    private static let dayTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "it_IT")
+        f.dateFormat = "EEE HH:mm"
+        return f
+    }()
 }
 
 #Preview("LimitsSection") {

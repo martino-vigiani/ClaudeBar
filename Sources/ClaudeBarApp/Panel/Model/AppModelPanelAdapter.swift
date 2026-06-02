@@ -260,6 +260,15 @@ final class AppModelPanelAdapter: PanelViewModeling {
             showCostDisclaimer: showCostDisclaimer)
     }
 
+    /// Formatter cached per i `dayKey` (`yyyy-MM-dd`). `DateFormatter` è costoso da allocare e
+    /// `series` gira a ogni rebuild del VM analytics: static = una sola allocazione.
+    private static let dayKeyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = .current
+        return f
+    }()
+
     /// Costruisce la serie temporale per il range scelto a partire dai bucket del report.
     private static func series(from report: AnalyticsReport, range: AnalyticsRange) -> [SpendPoint] {
         // "Oggi": serie ORARIA (24h) — un solo bucket giornaliero darebbe un grafico con un punto.
@@ -273,13 +282,9 @@ final class AppModelPanelAdapter: PanelViewModeling {
         case .week: 7
         case .month: 30
         }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = .current
-
         let days = report.byDay.suffix(limit)
         return days.compactMap { bucket in
-            guard let date = formatter.date(from: bucket.dayKey) else { return nil }
+            guard let date = Self.dayKeyFormatter.date(from: bucket.dayKey) else { return nil }
             return SpendPoint(
                 date: date,
                 cost: bucket.costUSD ?? 0,
