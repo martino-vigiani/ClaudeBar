@@ -1,0 +1,17 @@
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Bundle prodotto
+*.app
+
+# macOS
+.DS_Store
+
+# Repo di riferimento read-only (CodexBar) — non parte del progetto
+.reference/
+
+# Xcode user data (se in futuro si apre il package in Xcode)
+xcuserdata/
+*.xcuserstate

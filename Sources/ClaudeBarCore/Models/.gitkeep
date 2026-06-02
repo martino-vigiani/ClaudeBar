@@ -1,0 +1,3 @@
+# Models/ — value type Sendable: UsageEvent, AnalyticsReport, LimitsSnapshot,
+# PricingTable, GlanceState (soglie+mappa colore), PaceProjection, UsageWindow.
+# Proprietario: data-engineer (IMPL-B). NO AppKit/SwiftUI qui.

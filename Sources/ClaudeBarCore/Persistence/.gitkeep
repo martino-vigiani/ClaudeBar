@@ -1,0 +1,3 @@
+# Persistence/ — cache su disco (Codable atomico, off-main).
+# PersistenceService, AnalyticsCache (fileStates + report + pricingHash).
+# Proprietario: data-engineer (IMPL-B).

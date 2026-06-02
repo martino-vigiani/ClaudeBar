@@ -1,0 +1,3 @@
+# StatusItem/ — StatusItemController (NSStatusItem + click), IconRenderer (Core Graphics:
+# anello+%, interpolazione colore, IconCacheKey), GlanceIconSpec, DisplayLinkDriver (12fps).
+# Proprietario: core-engineer (IMPL-C). Soglie/mappa colore vivono in Core (GlanceState).

@@ -1,0 +1,3 @@
+# Limits/ — OAuth + Keychain + endpoint usage.
+# ClaudeOAuthCredentials, KeychainReader (no-UI + con prompt), ClaudeLimitsService (actor, gate 429).
+# Proprietario: data-engineer (IMPL-B).

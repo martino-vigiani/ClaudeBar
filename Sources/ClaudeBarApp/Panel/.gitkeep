@@ -1,0 +1,4 @@
+# Panel/ — GlassPanel (NSPanel borderless + ancoraggio + dismissal) [core-engineer]
+# + PanelRootView, IdentityHeader, LimitsSection, PaceSection (barra Pace & Forecast),
+#   AnalyticsSection (Swift Charts) [ui-engineer, IMPL-D].
+# La vista riceve i dati via .environment(AppModel.self).
