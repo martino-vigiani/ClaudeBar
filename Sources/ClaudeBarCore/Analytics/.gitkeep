@@ -1,0 +1,3 @@
+# Analytics/ — parser incrementale .jsonl + aggregazioni + pricing.
+# JSONLParser, IncrementalIndex (actor), TranscriptIndexer (actor, refresh(force:)), CostCalculator.
+# Proprietario: data-engineer (IMPL-B).

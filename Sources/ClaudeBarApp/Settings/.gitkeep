@@ -1,0 +1,3 @@
+# Settings/ — SettingsStore (@Observable UserDefaults), PreferencesView (SwiftUI),
+# LaunchAtLoginManager (SMAppService).
+# Proprietario: core-engineer (IMPL-C) per store/manager; ui-engineer per la UI delle Preferenze.

@@ -1,0 +1,2 @@
+# State/ — AppModel (@Observable @MainActor coordinatore) + AppStatus (enum stati/errori).
+# Proprietario: core-engineer (IMPL-C).

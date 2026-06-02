@@ -1,0 +1,2 @@
+# Watch/ — FileWatcher (DispatchSource + polling fallback), RefreshScheduler (async loop intervallo).
+# Proprietario: core-engineer (IMPL-C).
