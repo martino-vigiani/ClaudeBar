@@ -24,8 +24,8 @@ enum DiagnosticsReport {
 
     private static func environmentSection() -> String {
         let os = ProcessInfo.processInfo.operatingSystemVersion
-        var lines = ["== ClaudeBar — Diagnostica =="]
-        lines.append("Generato: \(ISO8601DateFormatter().string(from: Date()))")
+        var lines = ["== ClaudeBar — Diagnostics =="]
+        lines.append("Generated: \(ISO8601DateFormatter().string(from: Date()))")
         lines.append("App: \(AppInfo.displayName) \(AppInfo.shortVersion) (\(AppInfo.buildNumber))")
         lines.append("Bundle: \(AppInfo.bundleIdentifier)")
         lines.append("macOS: \(os.majorVersion).\(os.minorVersion).\(os.patchVersion)")
@@ -35,23 +35,23 @@ enum DiagnosticsReport {
     // MARK: Dati / cache
 
     private static func dataSection(report: AnalyticsReport?) -> String {
-        var lines = ["== Dati =="]
+        var lines = ["== Data =="]
         for root in AppPaths.transcriptRoots() {
             let exists = FileManager.default.fileExists(atPath: root.path)
-            lines.append("Transcript: \(root.path) \(exists ? "(presente)" : "(assente)")")
+            lines.append("Transcript: \(root.path) \(exists ? "(present)" : "(absent)")")
         }
-        lines.append("Cache app: \(AppPaths.appSupportDir().path)")
-        lines.append("Indice: \(AppPaths.indexDir().path)")
+        lines.append("App cache: \(AppPaths.appSupportDir().path)")
+        lines.append("Index: \(AppPaths.indexDir().path)")
 
         if let report {
-            lines.append("Report — token totali: \(report.totals.totalTokens)")
-            lines.append("Report — giorni: \(report.byDay.count), modelli: \(report.byModel.count), progetti: \(report.byProject.count)")
+            lines.append("Report — total tokens: \(report.totals.totalTokens)")
+            lines.append("Report — days: \(report.byDay.count), models: \(report.byModel.count), projects: \(report.byProject.count)")
             if let cost = report.totals.costUSD {
-                lines.append("Report — costo stimato: $\(String(format: "%.2f", cost))")
+                lines.append("Report — estimated cost: $\(String(format: "%.2f", cost))")
             }
-            lines.append("Report — generato: \(ISO8601DateFormatter().string(from: report.generatedAt))")
+            lines.append("Report — generated: \(ISO8601DateFormatter().string(from: report.generatedAt))")
         } else {
-            lines.append("Report: nessuna cache su disco.")
+            lines.append("Report: no cache on disk.")
         }
         return lines.joined(separator: "\n")
     }
@@ -60,12 +60,12 @@ enum DiagnosticsReport {
 
     private static func logSection() -> String {
         guard let entries = self.recentLogLines(limit: 80) else {
-            return "== Log recenti ==\n(Log non leggibili: OSLogStore non accessibile in questo contesto.)"
+            return "== Recent logs ==\n(Logs not readable: OSLogStore not accessible in this context.)"
         }
         if entries.isEmpty {
-            return "== Log recenti ==\n(Nessuna voce di log nelle ultime ore.)"
+            return "== Recent logs ==\n(No log entries in the last few hours.)"
         }
-        return "== Log recenti (\(entries.count)) ==\n" + entries.joined(separator: "\n")
+        return "== Recent logs (\(entries.count)) ==\n" + entries.joined(separator: "\n")
     }
 
     /// Ultime righe di log dei subsystem dell'app, dall'ultima ora. `nil` se lo store non è leggibile.

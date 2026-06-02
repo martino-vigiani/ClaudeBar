@@ -29,6 +29,7 @@ local analytics computed from your Claude Code transcripts.
 - **Deep local analytics** — cost (API-equivalent estimate), tokens, cache efficiency, breakdown by model/project, computed by an **incremental** `.jsonl` parser (no full re-scans).
 - **Multi-provider** — Claude is the default; also Codex, Gemini, Cursor, and the Anthropic / OpenAI consumption APIs. One active provider in the bar, switchable from the panel.
 - **Privacy by design** — everything is local. Secrets live in the Keychain. Claude Code OAuth credentials are read **read-only**. No telemetry, no network calls except the official usage endpoints.
+- **Bilingual** — English (default) and Italian, following your macOS system language.
 
 ## Requirements
 

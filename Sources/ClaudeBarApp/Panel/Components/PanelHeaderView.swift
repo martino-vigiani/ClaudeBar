@@ -75,8 +75,8 @@ struct PanelHeaderView: View {
                 .rotationEffect(.degrees(spin ? 360 : 0))
         }
         .buttonStyle(HeaderIconButtonStyle())
-        .help("Aggiorna")
-        .accessibilityLabel("Aggiorna")
+        .help("Refresh")
+        .accessibilityLabel("Refresh")
         .onChange(of: isRefreshing) { _, refreshing in
             guard !reduceMotion else { return }
             if refreshing {
@@ -94,19 +94,19 @@ struct PanelHeaderView: View {
             Image(systemName: "gearshape")
         }
         .buttonStyle(HeaderIconButtonStyle())
-        .help("Preferenze")
-        .accessibilityLabel("Preferenze")
+        .help("Preferences")
+        .accessibilityLabel("Preferences")
     }
 
     // MARK: Helpers
 
-    private func updatedText(_ date: Date) -> String {
+    private func updatedText(_ date: Date) -> LocalizedStringKey {
         let secs = Int(Date().timeIntervalSince(date))
-        if secs < 5 { return "aggiornato ora" }
-        if secs < 60 { return "aggiornato \(secs)s fa" }
+        if secs < 5 { return "updated just now" }
+        if secs < 60 { return "updated \(secs)s ago" }
         let mins = secs / 60
-        if mins < 60 { return "aggiornato \(mins)m fa" }
-        return "aggiornato \(mins / 60)h fa"
+        if mins < 60 { return "updated \(mins)m ago" }
+        return "updated \(mins / 60)h ago"
     }
 }
 

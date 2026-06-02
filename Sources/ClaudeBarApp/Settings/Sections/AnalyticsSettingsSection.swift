@@ -29,10 +29,10 @@ struct AnalyticsSettingsSection: View {
 
     private var rangeGroup: some View {
         SettingsGroup(
-            "Periodo di default",
-            footnote: "È il periodo mostrato quando apri il pannello. Puoi sempre cambiarlo al volo dal pannello stesso.")
+            "Default period",
+            footnote: "This is the period shown when you open the panel. You can always change it on the fly from the panel itself.")
         {
-            Picker("Periodo all'apertura", selection: self.$settings.defaultAnalyticsRange) {
+            Picker("Period on open", selection: self.$settings.defaultAnalyticsRange) {
                 ForEach(AnalyticsRange.allCases) { range in
                     Text(Self.rangeLabel(range)).tag(range)
                 }
@@ -44,9 +44,9 @@ struct AnalyticsSettingsSection: View {
     /// Etichetta estesa del range per le Impostazioni (nel pannello sono più compatte: Oggi/7g/30g).
     private static func rangeLabel(_ range: AnalyticsRange) -> String {
         switch range {
-        case .today: "Oggi"
-        case .week: "Ultimi 7 giorni"
-        case .month: "Ultimi 30 giorni"
+        case .today: String(localized: "Today")
+        case .week: String(localized: "Last 7 days")
+        case .month: String(localized: "Last 30 days")
         }
     }
 
@@ -54,15 +54,15 @@ struct AnalyticsSettingsSection: View {
 
     private var contentGroup: some View {
         SettingsGroup(
-            "Contenuto",
-            footnote: "Le sessioni subagent sono le esecuzioni avviate da Claude Code in sotto-agenti. Escluderle mostra solo l'uso della sessione principale.")
+            "Content",
+            footnote: "Subagent sessions are the runs started by Claude Code in sub-agents. Excluding them shows only the main session's usage.")
         {
-            Toggle("Includi le sessioni subagent", isOn: self.$settings.includeSubagentsInAnalytics)
+            Toggle("Include subagent sessions", isOn: self.$settings.includeSubagentsInAnalytics)
                 .toggleStyle(.switch)
             Divider()
-            Toggle("Mostra il disclaimer di costo", isOn: self.$settings.showCostDisclaimer)
+            Toggle("Show the cost disclaimer", isOn: self.$settings.showCostDisclaimer)
                 .toggleStyle(.switch)
-            Text("Con piano Max il costo non è una spesa reale: è il valore a listino dei token consumati (stima API-equivalente).")
+            Text("On the Max plan the cost isn't a real expense: it's the list value of the consumed tokens (API-equivalent estimate).")
                 .font(.dsCaption)
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -73,8 +73,8 @@ struct AnalyticsSettingsSection: View {
 
     private var pricingGroup: some View {
         SettingsGroup(
-            "Pricing personalizzato (avanzato)",
-            footnote: "Carica un file JSON con i prezzi per token dei modelli. Sovrascrive la tabella interna; utile per aggiornare i listini senza aggiornare l'app.")
+            "Custom pricing (advanced)",
+            footnote: "Load a JSON file with per-token model prices. It overrides the built-in table; handy for updating price lists without updating the app.")
         {
             PricingOverrideRow(settings: self.settings)
         }
@@ -106,14 +106,14 @@ private struct PricingOverrideRow: View {
             }
 
             HStack(spacing: DS.Spacing.s) {
-                Button(self.hasOverride ? "Sostituisci file…" : "Carica file JSON…") {
+                Button(self.hasOverride ? "Replace file…" : "Load JSON file…") {
                     self.importing = true
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
 
                 if self.hasOverride {
-                    Button("Rimuovi") { self.removeOverride() }
+                    Button("Remove") { self.removeOverride() }
                         .buttonStyle(.link)
                         .controlSize(.small)
                 }
@@ -143,11 +143,11 @@ private struct PricingOverrideRow: View {
             Image(systemName: "checkmark.seal")
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 1) {
-                Text("Override attivo")
+                Text("Override active")
                     .font(.dsBody)
                 Text(self.overrideCount > 0
-                    ? "\(self.overrideCount) modell\(self.overrideCount == 1 ? "o" : "i") con prezzi personalizzati."
-                    : "File caricato.")
+                    ? "\(self.overrideCount) model(s) with custom prices."
+                    : "File loaded.")
                     .font(.dsCaption)
                     .foregroundStyle(.secondary)
             }
@@ -155,7 +155,7 @@ private struct PricingOverrideRow: View {
     }
 
     private var emptyState: some View {
-        Text("Nessun override: l'app usa la tabella prezzi interna.")
+        Text("No override: the app uses the built-in price table.")
             .font(.dsCaption)
             .foregroundStyle(.tertiary)
     }
@@ -169,7 +169,7 @@ private struct PricingOverrideRow: View {
             guard let source = urls.first else { return }
             self.copyAndApply(from: source)
         case let .failure(error):
-            self.errorMessage = "Impossibile aprire il file: \(error.localizedDescription)"
+            self.errorMessage = String(localized: "Couldn't open the file: \(error.localizedDescription)")
         }
     }
 
@@ -181,13 +181,13 @@ private struct PricingOverrideRow: View {
         defer { if needsAccess { source.stopAccessingSecurityScopedResource() } }
 
         guard let data = try? Data(contentsOf: source) else {
-            self.errorMessage = "Impossibile leggere il file selezionato."
+            self.errorMessage = String(localized: "Couldn't read the selected file.")
             return
         }
         guard let decoded = try? JSONDecoder().decode([String: ModelPricing].self, from: data),
               !decoded.isEmpty
         else {
-            self.errorMessage = "Il file non è un JSON di pricing valido (atteso un oggetto «modello → prezzi»)."
+            self.errorMessage = String(localized: "The file isn't a valid pricing JSON (expected a “model → prices” object).")
             return
         }
 
@@ -197,7 +197,7 @@ private struct PricingOverrideRow: View {
             // Riscriviamo i dati (già validati) nel path standard, sostituendo l'eventuale precedente.
             try data.write(to: destination, options: .atomic)
         } catch {
-            self.errorMessage = "Impossibile salvare l'override: \(error.localizedDescription)"
+            self.errorMessage = String(localized: "Couldn't save the override: \(error.localizedDescription)")
             return
         }
 

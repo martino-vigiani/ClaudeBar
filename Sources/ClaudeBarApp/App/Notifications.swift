@@ -97,7 +97,12 @@ final class AppNotifications {
     private func sendSessionThresholdNotification(threshold: Int, usedPercent: Double, sound: Bool) {
         let content = UNMutableNotificationContent()
         content.title = AppInfo.displayName
-        content.body = "Sessione 5h al \(threshold)% usato (\(Int(usedPercent.rounded()))%)."
+        content.body = String(
+            format: NSLocalizedString(
+                "5h session at %lld%% used (%lld%%).",
+                comment: "Notification body: 5-hour session usage threshold reached; first %lld is the threshold, second is the current used percent"),
+            threshold,
+            Int(usedPercent.rounded()))
         if sound { content.sound = .default }
         self.deliver(content, identifier: "session-threshold-\(threshold)")
     }
@@ -105,7 +110,9 @@ final class AppNotifications {
     private func sendWeeklyResetNotification(sound: Bool) {
         let content = UNMutableNotificationContent()
         content.title = AppInfo.displayName
-        content.body = "Limite settimanale resettato. Si riparte!"
+        content.body = NSLocalizedString(
+            "Weekly limit reset. Fresh start!",
+            comment: "Notification body: celebrates the weekly limit reset")
         if sound { content.sound = .default }
         self.deliver(content, identifier: "weekly-reset")
     }

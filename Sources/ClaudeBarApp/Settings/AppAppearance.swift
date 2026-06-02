@@ -14,9 +14,9 @@ enum AppAppearance: String, Sendable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .system: "Sistema"
-        case .light: "Chiaro"
-        case .dark: "Scuro"
+        case .system: String(localized: "System")
+        case .light: String(localized: "Light")
+        case .dark: String(localized: "Dark")
         }
     }
 

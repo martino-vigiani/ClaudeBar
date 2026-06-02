@@ -27,7 +27,7 @@ struct AboutSettingsSection: View {
                 VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                     Text(AppInfo.displayName)
                         .font(.title.weight(.semibold))
-                    Text("Versione \(AppInfo.shortVersion) (\(AppInfo.buildNumber))")
+                    Text("Version \(AppInfo.shortVersion) (\(AppInfo.buildNumber))")
                         .font(.dsBody)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
@@ -54,22 +54,22 @@ struct AboutSettingsSection: View {
     // MARK: Crediti
 
     private var creditsGroup: some View {
-        SettingsGroup("Crediti") {
-            Text("ClaudeBar è un'utility per la barra dei menu che tiene d'occhio i limiti d'uso e i consumi locali di Claude Code, con analytics calcolate sui transcript del tuo Mac.")
+        SettingsGroup("Credits") {
+            Text("ClaudeBar is a menu bar utility that keeps an eye on Claude Code's usage limits and local consumption, with analytics computed from the transcripts on your Mac.")
                 .font(.dsBody)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Divider()
             SettingsRow(
-                "Costruita da",
-                caption: "Progetto personale, design monocromo.")
+                "Built by",
+                caption: "Personal project, monochrome design.")
             {
                 Text("SubraLabs")
                     .font(.dsBody)
             }
             SettingsRow(
-                "Ispirazione tecnica",
-                caption: "Il calcolo dei costi e il parsing dei transcript prendono spunto da CodexBar.")
+                "Technical inspiration",
+                caption: "The cost calculation and transcript parsing take inspiration from CodexBar.")
             {
                 Text("CodexBar")
                     .font(.dsBody)
@@ -81,20 +81,20 @@ struct AboutSettingsSection: View {
     // MARK: Link
 
     private var linksGroup: some View {
-        SettingsGroup("Risorse") {
+        SettingsGroup("Resources") {
             Link(destination: URL(string: "https://docs.claude.com/claude-code")!) {
-                Self.linkRow("Documentazione Claude Code", systemImage: "book")
+                Self.linkRow("Claude Code documentation", systemImage: "book")
             }
             Divider()
             Link(destination: URL(string: "https://www.anthropic.com/legal/usage-policy")!) {
-                Self.linkRow("Politiche d'uso Anthropic", systemImage: "doc.text")
+                Self.linkRow("Anthropic usage policy", systemImage: "doc.text")
             }
         }
     }
 
     /// Riga link uniforme: icona + titolo a sinistra, freccia "esterno" a destra. Niente colore
     /// accento: i link restano nel tono testo/secondario per coerenza monocroma.
-    private static func linkRow(_ title: String, systemImage: String) -> some View {
+    private static func linkRow(_ title: LocalizedStringKey, systemImage: String) -> some View {
         HStack(spacing: DS.Spacing.s) {
             Image(systemName: systemImage)
                 .foregroundStyle(.secondary)

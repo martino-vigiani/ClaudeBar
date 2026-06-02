@@ -28,8 +28,8 @@ struct MenuBarSettingsSection: View {
 
     private var previewGroup: some View {
         SettingsGroup(
-            "Anteprima",
-            footnote: "L'anteprima usa lo stesso disegno della menu bar. Colore e riempimento seguono sempre la quota USATA.")
+            "Preview",
+            footnote: "The preview uses the same drawing as the menu bar. Color and fill always follow the USED amount.")
         {
             GlancePreviewStrip(settings: self.settings)
                 .frame(maxWidth: .infinity)
@@ -40,27 +40,27 @@ struct MenuBarSettingsSection: View {
     // MARK: Stile
 
     private var styleGroup: some View {
-        SettingsGroup("Stile") {
-            Picker("Anello", selection: self.$settings.glanceStyle) {
-                Text("Singolo").tag(GlanceStyle.ring)
-                Text("Sessione + settimana").tag(GlanceStyle.dualBar)
+        SettingsGroup("Style") {
+            Picker("Ring", selection: self.$settings.glanceStyle) {
+                Text("Single").tag(GlanceStyle.ring)
+                Text("Session + week").tag(GlanceStyle.dualBar)
             }
             .pickerStyle(.segmented)
 
             Divider()
 
-            Toggle("Icona monocromatica (B/N)", isOn: self.$settings.monochromeIcon)
+            Toggle("Monochrome icon (B/W)", isOn: self.$settings.monochromeIcon)
                 .toggleStyle(.switch)
-            Text("In monocromatico il sistema ricolora l'icona come template B/N: utile per il massimo contrasto. Il colore semantico resta nel pannello.")
+            Text("In monochrome the system recolors the icon as a B/W template: handy for maximum contrast. The semantic color stays in the panel.")
                 .font(.dsCaption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             Divider()
 
-            Toggle("Pulsa quando la quota è quasi esaurita", isOn: self.$settings.pulseOnCritical)
+            Toggle("Pulse when the quota is nearly exhausted", isOn: self.$settings.pulseOnCritical)
                 .toggleStyle(.switch)
-            Text("Quando l'uso supera la soglia critica massima l'icona pulsa lentamente. Rispetta «Riduci movimento».")
+            Text("When usage exceeds the maximum critical threshold the icon pulses slowly. Respects “Reduce Motion”.")
                 .font(.dsCaption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -71,17 +71,17 @@ struct MenuBarSettingsSection: View {
 
     private var numberGroup: some View {
         SettingsGroup(
-            "Percentuale",
+            "Percentage",
             footnote: self.settings.showPercentLabel
-                ? "«Usato» mostra la quota consumata (es. 71%); «Rimanente» mostra quanto resta (es. 29%)."
-                : "Senza percentuale l'icona resta il solo anello, più compatta.")
+                ? "“Used” shows the consumed quota (e.g. 71%); “Remaining” shows what's left (e.g. 29%)."
+                : "Without the percentage the icon stays just the ring, more compact.")
         {
-            Toggle("Mostra la percentuale accanto all'anello", isOn: self.$settings.showPercentLabel)
+            Toggle("Show the percentage next to the ring", isOn: self.$settings.showPercentLabel)
                 .toggleStyle(.switch)
 
             if self.settings.showPercentLabel {
                 Divider()
-                Picker("Il numero mostra", selection: self.$settings.numberContent) {
+                Picker("The number shows", selection: self.$settings.numberContent) {
                     ForEach(GlanceNumberContent.allCases) { content in
                         Text(content.label).tag(content)
                     }
@@ -95,16 +95,16 @@ struct MenuBarSettingsSection: View {
 
     private var thresholdsGroup: some View {
         SettingsGroup(
-            "Soglie di stato",
-            footnote: "A quale quota USATA l'icona passa allo stato di avviso e poi critico (etichetta nell'anteprima, pulsazione e notifiche). La tinta dell'anello segue una scala fissa, condivisa col pannello.")
+            "Status thresholds",
+            footnote: "At which USED amount the icon switches to the warning and then critical state (label in the preview, pulsing and notifications). The ring's tint follows a fixed scale, shared with the panel.")
         {
             ThresholdSlider(
-                title: "Avviso (ambra)",
+                title: String(localized: "Warning (amber)"),
                 value: self.$settings.warnThreshold,
                 range: 0.30...0.80)
             Divider()
             ThresholdSlider(
-                title: "Critico (rosso)",
+                title: String(localized: "Critical (red)"),
                 value: self.$settings.criticalThreshold,
                 range: 0.70...0.98)
         }
@@ -157,7 +157,7 @@ private struct GlancePreviewStrip: View {
                 let state = self.state(forUsed: used)
                 VStack(spacing: DS.Spacing.xs) {
                     GlanceIconView(image: self.icon(forUsed: used, state: state))
-                    Text("\(Int((used * 100).rounded()))% usato")
+                    Text("\(Int((used * 100).rounded()))% used")
                         .font(.dsCaption)
                         .foregroundStyle(.secondary)
                     Text(Self.stateLabel(state))
@@ -201,10 +201,10 @@ private struct GlancePreviewStrip: View {
     private static func stateLabel(_ state: GlanceState) -> String {
         switch state {
         case .ok: "OK"
-        case .warn: "AMBRA"
-        case .low: "BASSO"
-        case .critical: "CRITICO"
-        case .empty: "ESAURITO"
+        case .warn: String(localized: "AMBER")
+        case .low: String(localized: "LOW")
+        case .critical: String(localized: "CRITICAL")
+        case .empty: String(localized: "EXHAUSTED")
         }
     }
 }

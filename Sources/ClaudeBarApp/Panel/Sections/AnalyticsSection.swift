@@ -48,7 +48,7 @@ struct AnalyticsSection: View {
 
     private var header: some View {
         HStack {
-            EyebrowTag(text: "ANALYTICS", symbol: "chart.line.uptrend.xyaxis")
+            EyebrowTag(text: String(localized: "ANALYTICS"), symbol: "chart.line.uptrend.xyaxis")
                 .font(.dsTitle)
             Spacer()
             // Selettore neutro (niente segmented blu di sistema): pillola con segmento attivo
@@ -85,17 +85,17 @@ struct AnalyticsSection: View {
     private var kpiRow: some View {
         HStack(spacing: DS.Spacing.m) {
             KPITile(
-                title: "Costo \(analytics.range.label.lowercased())",
+                title: String(localized: "Cost \(analytics.range.label.lowercased())"),
                 value: analytics.cost.currencyString,
                 delta: analytics.costDeltaPct,
-                footnote: analytics.showCostDisclaimer ? "stima API-equivalente" : "",
+                footnote: analytics.showCostDisclaimer ? String(localized: "API-equivalent estimate") : "",
                 symbol: "dollarsign.circle"
             )
             KPITile(
-                title: "Token",
+                title: String(localized: "Token"),
                 value: analytics.tokens.compactString,
                 delta: nil,
-                footnote: "cache \(Int((analytics.cacheEfficiency * 100).rounded()))% ⚡",
+                footnote: String(localized: "cache \(Int((analytics.cacheEfficiency * 100).rounded()))% ⚡"),
                 symbol: "bolt"
             )
         }
@@ -116,7 +116,7 @@ struct AnalyticsSection: View {
     private var chartCard: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.s) {
             HStack {
-                Text(showCost ? "Spesa nel tempo" : "Token nel tempo")
+                Text(showCost ? "Spend over time" : "Tokens over time")
                     .font(.dsHeadline)
                 Spacer()
                 Button {
@@ -132,7 +132,7 @@ struct AnalyticsSection: View {
             SpendChart(series: analytics.series, showCost: showCost)
                 .frame(height: 96)
             if analytics.showCostDisclaimer {
-                Text("Stima API-equivalente: i piani Max sono flat, non è spesa reale.")
+                Text("API-equivalent estimate: Max plans are flat-rate, this is not real spend.")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.tertiary)
             }
@@ -145,8 +145,8 @@ struct AnalyticsSection: View {
 
     private var breakdowns: some View {
         VStack(spacing: DS.Spacing.s) {
-            BreakdownDisclosure(title: "Per modello", items: analytics.byModel, showCost: showCost)
-            BreakdownDisclosure(title: "Per progetto", items: analytics.byProject, showCost: showCost)
+            BreakdownDisclosure(title: String(localized: "By model"), items: analytics.byModel, showCost: showCost)
+            BreakdownDisclosure(title: String(localized: "By project"), items: analytics.byProject, showCost: showCost)
         }
     }
 
@@ -163,7 +163,7 @@ struct AnalyticsSection: View {
                 Button {
                     withAnimation(DS.Motion.soft) { expanded.toggle() }
                 } label: {
-                    Label(expanded ? "Mostra di meno" : "Mostra di più",
+                    Label(expanded ? "Show less" : "Show more",
                           systemImage: expanded ? "chevron.up" : "chevron.down")
                         .font(.dsHeadline)
                         .frame(maxWidth: .infinity)
@@ -223,7 +223,7 @@ private struct DeltaBadge: View {
                 .font(.system(size: 10, weight: .semibold))
         }
         .foregroundStyle(up ? UsageColorScale.color(used: 90) : UsageColorScale.color(used: 20))
-        .accessibilityLabel(up ? "in aumento del \(Int(pct))%" : "in calo del \(abs(Int(pct)))%")
+        .accessibilityLabel(up ? Text("up by \(Int(pct))%") : Text("down by \(abs(Int(pct)))%"))
     }
 }
 
@@ -247,17 +247,17 @@ private struct TokenBreakdownCard: View {
     }
 
     private var segs: [Seg] {
-        [Seg(label: "Input nuovi", value: input, shade: 0.85),
-         Seg(label: "Cache scritti", value: cacheWrite, shade: 0.55),
-         Seg(label: "Cache letti", value: cacheRead, shade: 0.38),
-         Seg(label: "Output", value: output, shade: 0.20)]
+        [Seg(label: String(localized: "New input"), value: input, shade: 0.85),
+         Seg(label: String(localized: "Cache writes"), value: cacheWrite, shade: 0.55),
+         Seg(label: String(localized: "Cache reads"), value: cacheRead, shade: 0.38),
+         Seg(label: String(localized: "Output"), value: output, shade: 0.20)]
     }
     private var total: Int { max(1, input + cacheRead + cacheWrite + output) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.s) {
             HStack {
-                EyebrowTag(text: "TOKEN", symbol: "bolt")
+                EyebrowTag(text: String(localized: "TOKEN"), symbol: "bolt")
                 Spacer()
                 Text(total.compactString)
                     .font(.dsMono)
@@ -337,7 +337,7 @@ private struct BreakdownDisclosure: View {
 
             if open {
                 if items.isEmpty {
-                    Text("Nessun dato nel periodo")
+                    Text("No data in this period")
                         .font(.dsCaption)
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -379,7 +379,7 @@ private struct BreakdownDisclosure: View {
         .onTapGesture { withAnimation(DS.Motion.soft) { open.toggle() } }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel("\(title), \(open ? "espanso" : "compresso")")
+        .accessibilityLabel(open ? Text("\(title), expanded") : Text("\(title), collapsed"))
         .animation(DS.Motion.soft, value: open)
     }
 }
@@ -390,15 +390,15 @@ private struct ExtraStatsView: View {
     let analytics: AnalyticsVM
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.s) {
-            EyebrowTag(text: "DETTAGLI")
+            EyebrowTag(text: String(localized: "DETAILS"))
             HStack {
-                Text("Efficienza cache").font(.dsBody)
+                Text("Cache efficiency").font(.dsBody)
                 Spacer()
                 Text("\(Int((analytics.cacheEfficiency * 100).rounded()))%")
                     .font(.dsMono).foregroundStyle(.primary)
             }
             HStack {
-                Text("Punti nel grafico").font(.dsBody)
+                Text("Chart points").font(.dsBody)
                 Spacer()
                 Text("\(analytics.series.count)").font(.dsMono).foregroundStyle(.secondary)
             }

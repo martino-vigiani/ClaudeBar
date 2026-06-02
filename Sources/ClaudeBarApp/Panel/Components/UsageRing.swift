@@ -48,7 +48,7 @@ struct UsageRing: View {
                     .font(.dsDisplay(26))
                     .foregroundStyle(.primary)
                     .contentTransition(.numericText(value: displayed))
-                Text(showUsed ? "usato" : "libero")
+                Text(showUsed ? "used" : "free")
                     .font(.dsCaption)
                     .foregroundStyle(.secondary)
                     .contentTransition(.opacity)
@@ -76,23 +76,23 @@ struct UsageRing: View {
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(Text(window.kind.eyebrow))
-        .accessibilityValue(Text("\(Int(used.rounded())) percento usato, \(window.state.accessibilityDescription)"))
-        .accessibilityHint(Text("Tocca per alternare usato e rimanente"))
+        .accessibilityValue(Text("\(Int(used.rounded())) percent used, \(window.state.accessibilityDescription)"))
+        .accessibilityHint(Text("Tap to switch between used and remaining"))
     }
 }
 
 extension UsageState {
     var accessibilityDescription: String {
         switch self {
-        case .ok: "nei limiti"
-        case .warn: "attenzione"
-        case .crit: "critico"
-        case .empty: "quasi esaurito"
+        case .ok: String(localized: "within limits")
+        case .warn: String(localized: "warning")
+        case .crit: String(localized: "critical")
+        case .empty: String(localized: "nearly exhausted")
         }
     }
 }
 
-#Preview("UsageRing — stati") {
+#Preview("UsageRing — states") {
     HStack(spacing: 24) {
         UsageRing(window: .init(kind: .session, utilization: 28, resetsAt: .now, pace: nil),
                   showUsed: .constant(true))

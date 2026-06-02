@@ -21,13 +21,13 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     /// Titolo nella sidebar e in cima al pannello di dettaglio.
     var title: String {
         switch self {
-        case .general: "Generale"
-        case .menuBar: "Menu bar"
-        case .providers: "Provider"
-        case .notifications: "Notifiche"
-        case .analytics: "Analytics"
-        case .advanced: "Avanzato"
-        case .about: "Info"
+        case .general: String(localized: "General")
+        case .menuBar: String(localized: "Menu bar")
+        case .providers: String(localized: "Providers")
+        case .notifications: String(localized: "Notifications")
+        case .analytics: String(localized: "Analytics")
+        case .advanced: String(localized: "Advanced")
+        case .about: String(localized: "About")
         }
     }
 
@@ -47,12 +47,12 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     /// Sottotitolo opzionale mostrato sotto il titolo della sezione (didascalia).
     var subtitle: String? {
         switch self {
-        case .general: "Avvio, aggiornamento, aspetto"
-        case .menuBar: "Icona, percentuale, soglie colore"
-        case .providers: "Account, chiavi, default"
-        case .notifications: "Soglie e celebrazioni"
-        case .analytics: "Periodo, costi, pricing"
-        case .advanced: "Dati, cache, esporta, reset"
+        case .general: String(localized: "Startup, refresh, appearance")
+        case .menuBar: String(localized: "Icon, percentage, color thresholds")
+        case .providers: String(localized: "Accounts, keys, default")
+        case .notifications: String(localized: "Thresholds and celebrations")
+        case .analytics: String(localized: "Period, costs, pricing")
+        case .advanced: String(localized: "Data, cache, export, reset")
         case .about: nil
         }
     }

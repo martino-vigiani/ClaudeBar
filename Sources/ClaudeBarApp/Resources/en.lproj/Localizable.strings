@@ -1,0 +1,3 @@
+/* ClaudeBar — English (base) localization.
+   The source code uses English LocalizedStringKey literals, so English resolves to the key
+   itself; entries here are only needed to override or disambiguate. Kept for completeness. */

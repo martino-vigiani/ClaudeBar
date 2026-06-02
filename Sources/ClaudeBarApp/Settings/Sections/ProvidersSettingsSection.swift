@@ -28,10 +28,10 @@ struct ProvidersSettingsSection: View {
 
     private var defaultGroup: some View {
         SettingsGroup(
-            "Provider attivo",
-            footnote: "Il provider attivo determina l'anello nella menu bar. Con l'auto-rilevamento attivo, all'avvio l'app riempie solo i provider non configurati a mano: le scelte manuali non vengono sovrascritte.")
+            "Active provider",
+            footnote: "The active provider determines the ring in the menu bar. With auto-detection on, at launch the app only fills in providers not configured by hand: manual choices are not overwritten.")
         {
-            Picker("Provider di default", selection: self.defaultBinding) {
+            Picker("Default provider", selection: self.defaultBinding) {
                 ForEach(self.settings.multiProvider.enabledProviders, id: \.self) { id in
                     Text(ProviderCatalog.descriptor(for: id).displayName).tag(id)
                 }
@@ -40,7 +40,7 @@ struct ProvidersSettingsSection: View {
                 }
             }
             Divider()
-            Toggle("Rileva automaticamente i provider", isOn: self.autoDetectBinding)
+            Toggle("Detect providers automatically", isOn: self.autoDetectBinding)
                 .toggleStyle(.switch)
         }
     }
@@ -49,8 +49,8 @@ struct ProvidersSettingsSection: View {
 
     private var providersGroup: some View {
         SettingsGroup(
-            "Provider",
-            footnote: "Abilita i provider che vuoi monitorare e configura le credenziali. Lo switcher nel pannello compare solo con due o più provider abilitati.")
+            "Providers",
+            footnote: "Enable the providers you want to monitor and configure their credentials. The switcher in the panel appears only with two or more enabled providers.")
         {
             ForEach(Array(ProviderCatalog.all.enumerated()), id: \.element.id) { index, descriptor in
                 if index > 0 { Divider() }
