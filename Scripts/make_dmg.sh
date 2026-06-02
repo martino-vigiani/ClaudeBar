@@ -40,7 +40,7 @@ if [[ -n "${MOUNT:-}" && -f "$MOUNT/.VolumeIcon.icns" ]]; then
 fi
 [[ -n "${MOUNT:-}" ]] && hdiutil detach "$MOUNT" >/dev/null || true
 
-echo "==> Comprimo in $DMG_FINAL…"
+echo "==> Comprimo in ${DMG_FINAL} …"
 rm -f "$DMG_FINAL"
 hdiutil convert "$TMP_DMG" -format UDZO -o "$DMG_FINAL" >/dev/null
 rm -f "$TMP_DMG"

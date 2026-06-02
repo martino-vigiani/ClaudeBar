@@ -15,6 +15,9 @@ Assets/AppIcon-masked.png
 # macOS
 .DS_Store
 
+# Settings locali di Claude Code (personali, non condivisi)
+.claude/settings.local.json
+
 # Repo di riferimento read-only (CodexBar) — non parte del progetto
 .reference/
 

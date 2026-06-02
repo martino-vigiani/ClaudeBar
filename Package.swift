@@ -35,6 +35,9 @@ let package = Package(
             name: "ClaudeBarApp",
             dependencies: ["ClaudeBarCore"],
             path: "Sources/ClaudeBarApp",
+            // L'icona (.icns) la impacchetta `Scripts/bundle.sh` copiando questa cartella nel
+            // .app; SwiftPM non deve gestirla (eviterebbe il warning "unhandled resource").
+            exclude: ["Resources"],
             swiftSettings: strictConcurrency),
 
         // MARK: CLI (dev-only validation tool, NOT shipped in the .app)
