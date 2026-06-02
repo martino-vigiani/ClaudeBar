@@ -154,12 +154,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             selector: #selector(self.handleTogglePanelNotification),
             name: NSNotification.Name("com.subralabs.claudebar.togglePanel"),
             object: nil)
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(self.handleOpenSettingsNotification),
+            name: NSNotification.Name("com.subralabs.claudebar.openSettings"),
+            object: nil)
         #endif
     }
 
     #if DEBUG
     @objc private func handleTogglePanelNotification() {
         self.statusController?.togglePanel()
+    }
+
+    @objc private func handleOpenSettingsNotification() {
+        self.model?.openPreferences()
     }
     #endif
 

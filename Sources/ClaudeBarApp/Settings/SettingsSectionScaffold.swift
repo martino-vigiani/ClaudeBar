@@ -4,7 +4,7 @@ import SwiftUI
 //
 // Ogni sezione delle Impostazioni è una `View` indipendente che riceve il `SettingsStore`
 // via `@Bindable` e, dove serve, lo `ProviderSecretStoring` (Keychain). Per dare a TUTTE le
-// sezioni lo stesso ritmo visivo (header + form a gruppi su vetro neutro), le si avvolge in
+// sezioni lo stesso ritmo visivo (form a gruppi nativo macOS), le si avvolge in
 // `SettingsSectionScaffold`. Gli implementatori NON ricreano l'header: usano lo scaffold e
 // riempiono solo `content` con `SettingsGroup`/`Form`.
 //
@@ -21,10 +21,16 @@ import SwiftUI
 //         }
 //     }
 
-/// Guscio standard di una sezione: `Form` in stile grouped (look nativo macOS 26), titolo nella
-/// titlebar via `navigationTitle`. Vetro NEUTRO (DECISIONS §3): nessuna tinta; lo stile grouped
-/// fornisce inset, materiali e divisori di sistema. Niente header manuale → il titolo NON è più
-/// duplicato (prima compariva sia in titlebar sia come testo grande nel contenuto).
+/// Guscio standard di una sezione: `Form` in stile grouped, titolo nella titlebar via
+/// `navigationTitle`.
+///
+/// DESIGN (look "System Settings"/Klack): la finestra è NATIVA (`SettingsWindowController` non usa
+/// più alcun NSVisualEffectView custom) e qui usiamo il grouped NATIVO di macOS 26 (Tahoe) SENZA
+/// sovrascriverlo. Su Tahoe il `Form.grouped` è già reso col design Liquid Glass di sistema: card
+/// arrotondate, contrasto corretto (leggermente sollevate sullo sfondo), inset e divisori nativi.
+/// Lezione delle iterazioni precedenti: bezel/sfondi custom davano un effetto "uncanny" (né nativo
+/// né premium) — la resa migliore è lasciar lavorare il sistema. Vetro NEUTRO (DECISIONS §3):
+/// nessuna tinta cromatica, solo i materiali neutri di sistema.
 struct SettingsSectionScaffold<Content: View>: View {
     let section: SettingsSection
     @ViewBuilder var content: Content
@@ -41,10 +47,11 @@ struct SettingsSectionScaffold<Content: View>: View {
 
 // MARK: - Gruppo di opzioni
 
-/// Gruppo etichettato di controlli, reso come `Section` di un `Form` grouped: titolo → header
-/// nativo, footnote → footer nativo. Il contenuto resta in un `VStack` (una riga del Form) così
-/// i layout interni delle sezioni (divisori, chip, righe custom) restano invariati: cambia solo
-/// la cornice, che ora è quella di sistema. Usare per ogni blocco di una sezione.
+/// Gruppo etichettato di controlli, reso come `Section` NATIVA di un `Form` grouped: titolo →
+/// header di sistema, footnote → footer di sistema, sfondo card → quello nativo di macOS (rounded,
+/// ben contrastato, Liquid Glass su Tahoe). Il contenuto resta in un `VStack` (una singola riga del
+/// Form) così i layout interni delle sezioni — divisori espliciti, chip, righe custom — restano
+/// invariati e non si scontrano con i separatori di riga automatici del sistema.
 struct SettingsGroup<Content: View>: View {
     let title: LocalizedStringKey?
     let footnote: LocalizedStringKey?
@@ -78,7 +85,8 @@ struct SettingsGroup<Content: View>: View {
 // MARK: - Riga con etichetta + controllo a destra
 
 /// Riga "etichetta a sinistra, controllo a destra" con didascalia opzionale, resa con
-/// `LabeledContent` (allineamento nativo macOS). La didascalia diventa la label secondaria.
+/// `LabeledContent` (allineamento nativo macOS: label a sinistra, controllo flush a destra). La
+/// didascalia diventa la label secondaria, in caption attenuata sotto il titolo.
 struct SettingsRow<Control: View>: View {
     let title: LocalizedStringKey
     let caption: LocalizedStringKey?

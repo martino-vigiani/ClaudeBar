@@ -55,12 +55,10 @@ struct LimitsErrorView: View {
                 .font(.dsCaption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Button(action: onRetry) {
-                Text("Retry").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glass)
-            .tint(.clear)
-            .padding(.top, DS.Spacing.xs)
+            Button("Retry", action: onRetry)
+                .buttonStyle(PanelActionButtonStyle(role: .prominent))
+                .frame(maxWidth: .infinity)
+                .padding(.top, DS.Spacing.xs)
         }
         .padding(DS.Spacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -92,9 +90,10 @@ struct NoAuthView: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DS.Spacing.s) {
                 Button("How to", action: onHowTo)
-                    .buttonStyle(.glass).tint(.clear)
+                    .buttonStyle(PanelActionButtonStyle(role: .secondary))
                 Button("Reconnect", action: onReconnect)
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(PanelActionButtonStyle(role: .prominent))
+                Spacer(minLength: 0)
             }
             .padding(.top, DS.Spacing.xs)
         }
@@ -139,6 +138,66 @@ struct InfoBanner: View {
         }
         .padding(DS.Spacing.m)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Stile bottoni d'azione degli stati (no-auth, errore, …)
+//
+// Capsule pulite, monocrome, NON glass. Stesso motivo dell'header (PanelHeaderView §69):
+// dentro il GlassEffectContainer condiviso del pannello due bottoni `.glass` adiacenti si
+// FONDONO in un'unica capsula con rientranza ("blob"). Qui usiamo background espliciti, così
+// i bottoni restano separati, di dimensione coerente e con la spaziatura dell'HStack.
+//
+// Nessun accento blu di sistema (DECISIONS §3, vetro NEUTRO): il "prominent" è una capsula
+// graphite neutra (Color.primary a bassa opacità), il "secondary" è bordato sottile.
+
+private struct PanelActionButtonStyle: ButtonStyle {
+    enum Role { case secondary, prominent }
+    let role: Role
+    @Environment(\.colorScheme) private var scheme
+
+    func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed
+        return configuration.label
+            .font(.dsHeadline)
+            .foregroundStyle(labelColor)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, DS.Spacing.m)
+            .frame(height: 28)
+            .background {
+                Capsule(style: .continuous).fill(fill(pressed: pressed))
+            }
+            .overlay {
+                if role == .secondary {
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.primary.opacity(scheme == .dark ? 0.16 : 0.14),
+                                      lineWidth: DS.Size.hairline)
+                }
+            }
+            .contentShape(Capsule(style: .continuous))
+            .opacity(pressed ? 0.85 : 1)
+            .animation(.easeOut(duration: 0.12), value: pressed)
+    }
+
+    /// Colore label: il prominent ha un fill graphite "pieno", quindi serve il colore di
+    /// contrasto (chiaro su light dove il fill è scuro, scuro su dark dove il fill è chiaro).
+    private var labelColor: Color {
+        switch role {
+        case .prominent: scheme == .dark ? .primary : Color(nsColor: .windowBackgroundColor)
+        case .secondary: .secondary
+        }
+    }
+
+    private func fill(pressed: Bool) -> Color {
+        switch role {
+        case .prominent:
+            // Graphite neutro: scuro su light, chiaro su dark — leggibile, mai blu.
+            let base = scheme == .dark ? Color.primary.opacity(0.16) : Color.primary.opacity(0.88)
+            return pressed ? base.opacity(scheme == .dark ? 0.24 : 0.78) : base
+        case .secondary:
+            return Color.primary.opacity(pressed ? 0.12 : 0.06)
+        }
     }
 }
 

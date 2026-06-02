@@ -26,8 +26,10 @@ struct ProviderRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Image(systemName: self.descriptor.branding.symbolName)
-                    .font(.system(size: 15, weight: .regular))
+                ProviderGlyph(
+                    providerID: self.descriptor.id.rawValue,
+                    fallbackSymbol: self.descriptor.branding.symbolName,
+                    size: 16)
                     .foregroundStyle(.secondary)
                     .frame(width: 20)
 

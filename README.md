@@ -85,3 +85,6 @@ commercial use). If you want a commercial license, open an issue.
 Cost calculation and transcript parsing take **technical inspiration** from
 [CodexBar](https://github.com/steipete/CodexBar) (MIT) by Peter Steinberger. ClaudeBar ships none of
 CodexBar's code — it's an independent, Claude-first reimplementation.
+
+Provider glyphs are derived from [Simple Icons](https://simpleicons.org) (CC0). All provider names and
+logos are trademarks of their respective owners and are used here for identification only.

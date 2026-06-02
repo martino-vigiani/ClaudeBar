@@ -95,7 +95,7 @@ struct AnalyticsSection: View {
                 title: String(localized: "Token"),
                 value: analytics.tokens.compactString,
                 delta: nil,
-                footnote: String(localized: "cache \(Int((analytics.cacheEfficiency * 100).rounded()))% ⚡"),
+                footnote: String(localized: "cache \(Int((analytics.cacheEfficiency * 100).rounded()))%"),
                 symbol: "bolt"
             )
         }
