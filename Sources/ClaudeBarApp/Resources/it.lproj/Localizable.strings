@@ -12,6 +12,7 @@
 "%lld percent used, %@, you'll reach the reset with margin" = "%lld percento usato, %@, arrivi al reset con margine";
 "%lld percent used, %@" = "%lld percento usato, %@";
 "on track" = "in linea";
+"Limit reached" = "Limite raggiunto";
 "over pace" = "sopra ritmo";
 "under pace" = "sotto ritmo";
 "5H SESSION" = "SESSIONE 5H";
@@ -40,7 +41,7 @@
 "Enter your %@ API key in Settings → Providers to see usage and cost." = "Inserisci la API key di %@ nelle Impostazioni → Provider per vedere usage e costo.";
 "Cost %@" = "Costo %@";
 "API-equivalent estimate" = "stima API-equivalente";
-"cache %lld% ⚡" = "cache %lld%% ⚡";
+"cache %lld%" = "cache %lld%%";
 "Spend over time" = "Spesa nel tempo";
 "Tokens over time" = "Token nel tempo";
 "API-equivalent estimate: Max plans are flat-rate, this is not real spend." = "Stima API-equivalente: i piani Max sono flat, non è spesa reale.";
@@ -81,6 +82,7 @@
 
 /* ===== Settings ===== */
 "System" = "Sistema";
+"Monitoring" = "Monitoraggio";
 "Light" = "Chiaro";
 "Dark" = "Scuro";
 "General" = "Generale";

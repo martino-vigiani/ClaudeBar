@@ -15,12 +15,19 @@ struct ProviderSwitcher: View {
     let onSelect: (String) -> Void
 
     var body: some View {
-        HStack(spacing: DS.Spacing.xs) {
-            ForEach(providers) { provider in
-                segment(for: provider)
+        // Per restare leggibile a 6 provider: il chip ATTIVO mostra logo + nome + pallino,
+        // gli INATTIVI collassano a solo-logo (+ pallino) con tooltip. Se la riga eccede
+        // comunque, scorre orizzontalmente invece di troncare i nomi a "C…".
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Spacing.xs) {
+                ForEach(providers) { provider in
+                    segment(for: provider)
+                }
             }
+            .padding(DS.Spacing.xxs)
+            .animation(DS.Motion.soft, value: activeID)
         }
-        .padding(DS.Spacing.xxs)
+        .scrollClipDisabled()
         .background {
             Capsule(style: .continuous)
                 .fill(Color.primary.opacity(0.06))
@@ -36,18 +43,22 @@ struct ProviderSwitcher: View {
             onSelect(provider.id)
         } label: {
             HStack(spacing: 5) {
-                Image(systemName: provider.symbol)
-                    .font(.system(size: 11, weight: .medium))
-                Text(provider.name)
-                    .font(.dsCaption.weight(isActive ? .semibold : .regular))
-                    .lineLimit(1)
+                ProviderGlyph(providerID: provider.id, fallbackSymbol: provider.symbol, size: 12)
+                // Nome solo sul chip attivo → compatto e leggibile anche con 6 provider.
+                if isActive {
+                    Text(provider.name)
+                        .font(.dsCaption.weight(.semibold))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .transition(.opacity.combined(with: .move(edge: .leading)))
+                }
                 if let used = provider.stateColorUsed {
                     Circle()
                         .fill(UsageColorScale.color(used: used))
                         .frame(width: 5, height: 5)
                 }
             }
-            .padding(.horizontal, DS.Spacing.s)
+            .padding(.horizontal, isActive ? DS.Spacing.s : DS.Spacing.xs)
             .padding(.vertical, DS.Spacing.xs)
             .foregroundStyle(isActive ? Color.primary : Color.secondary)
             .background {
@@ -59,7 +70,8 @@ struct ProviderSwitcher: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .animation(DS.Motion.soft, value: isActive)
+        // Tooltip sui chip collassati (e utile anche su quello attivo) per non perdere il nome.
+        .help(provider.name)
         .accessibilityLabel(provider.name)
         .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
     }
@@ -74,5 +86,21 @@ struct ProviderSwitcher: View {
         ],
         activeID: "claude",
         onSelect: { _ in })
+        .padding(40)
+}
+
+#Preview("ProviderSwitcher — 6 provider") {
+    ProviderSwitcher(
+        providers: [
+            ProviderChipVM(id: "claude", name: "Claude", symbol: "sparkles", stateColorUsed: 62),
+            ProviderChipVM(id: "codex", name: "Codex", symbol: "chevron.left.forwardslash.chevron.right", stateColorUsed: 41),
+            ProviderChipVM(id: "gemini", name: "Gemini", symbol: "diamond", stateColorUsed: 18),
+            ProviderChipVM(id: "cursor", name: "Cursor", symbol: "cursorarrow", stateColorUsed: nil),
+            ProviderChipVM(id: "anthropic_api", name: "Anthropic", symbol: "key.horizontal", stateColorUsed: 88),
+            ProviderChipVM(id: "openai_api", name: "OpenAI", symbol: "key.horizontal", stateColorUsed: 7),
+        ],
+        activeID: "claude",
+        onSelect: { _ in })
+        .frame(width: 320)
         .padding(40)
 }

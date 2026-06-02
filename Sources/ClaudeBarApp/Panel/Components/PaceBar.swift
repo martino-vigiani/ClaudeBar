@@ -18,6 +18,11 @@ struct PaceBar: View {
 
     private var used: Double { window.utilization }
     private var fillFraction: Double { max(0, min(1, used / 100)) }
+    /// Finestra esaurita: utilization ≥ 100% (>= 99.5 per evitare flicker di arrotondamento).
+    /// In questo stato "sopra ritmo" + "esaurisci tra ~0m" è privo di senso: la quota è già finita.
+    private var isExhausted: Bool { used >= 99.5 }
+    /// Colore critico/rosso, coerente con `PaceStatus.over.color`.
+    private var limitReachedColor: Color { UsageColorScale.color(used: 92) }
     // Elemento glance della finestra attiva → colore sulla curva parametrica con le soglie utente.
     private var fillColor: Color { window.glanceColor }
 
@@ -96,7 +101,20 @@ struct PaceBar: View {
 
     @ViewBuilder
     private var footer: some View {
-        if let pace = window.pace {
+        if isExhausted {
+            // Finestra al 100%: niente stato ritmo né ETA ("sopra ritmo / ~0m" è insensato),
+            // solo l'etichetta critica "Limit reached". Il reset è già mostrato altrove.
+            Label {
+                Text("Limit reached")
+                    .font(.dsCaption.weight(.medium))
+            } icon: {
+                Image(systemName: "exclamationmark.octagon.fill")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(limitReachedColor)
+            .labelStyle(.titleAndIcon)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else if let pace = window.pace {
             // Due righe (stato sopra, ETA sotto): nelle due colonne strette del pannello una
             // riga sola troncava ("esaurisci tr…"). Così niente troncamenti.
             VStack(alignment: .leading, spacing: 2) {
@@ -142,6 +160,7 @@ struct PaceBar: View {
     }
 
     private var paceAccessibilityValue: LocalizedStringKey {
+        if isExhausted { return "\(Int(used.rounded())) percent used, Limit reached" }
         guard let pace = window.pace else { return "\(Int(used.rounded())) percent used" }
         if let eta = pace.etaToEmpty {
             return "\(Int(used.rounded())) percent used, \(pace.status.label), at this pace you run out in \(Self.compactDuration(eta))"
@@ -165,6 +184,11 @@ struct PaceBar: View {
             kind: .session, utilization: 88, resetsAt: .now,
             pace: PaceInfo(paceMarker: 0.86, status: .onTrack,
                            etaToEmpty: 0.6 * 3600, emptyAt: .now)))
+        // Esaurita (100%): "Limit reached", nessuno stato ritmo né ETA.
+        PaceBar(window: .init(
+            kind: .weekly, utilization: 100, resetsAt: .now,
+            pace: PaceInfo(paceMarker: 0.7, status: .over,
+                           etaToEmpty: 0, emptyAt: .now)))
     }
     .padding(40)
     .frame(width: 360)

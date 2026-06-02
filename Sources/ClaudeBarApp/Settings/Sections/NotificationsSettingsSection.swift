@@ -83,9 +83,11 @@ private struct ThresholdEditor: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.s) {
+        VStack(alignment: .leading, spacing: DS.Spacing.m) {
             Text("Warning thresholds (% used)")
                 .font(.dsCaption.weight(.semibold))
+                .textCase(.uppercase)
+                .kerning(0.4)
                 .foregroundStyle(.secondary)
 
             if self.thresholds.isEmpty {
@@ -104,18 +106,26 @@ private struct ThresholdEditor: View {
 
     // Chip in flusso a capo (FlowLayout): un pill per ogni soglia, con "x" per rimuovere.
     private var chips: some View {
-        ThresholdFlowLayout(spacing: DS.Spacing.xs) {
+        ThresholdFlowLayout(spacing: DS.Spacing.s) {
             ForEach(self.thresholds, id: \.self) { value in
                 ThresholdChip(value: value) { self.remove(value) }
             }
         }
     }
 
+    // Riga "aggiungi soglia": campo numerico breve + suffisso "%" + bottone Add.
+    //
+    // FIX layout: dentro un `Form`, `TextField("80", text:)` interpreta "80" come ETICHETTA del
+    // campo e la mostra a SINISTRA del box (autolabeling di Form) → "80" finiva fuori dal campo.
+    // Soluzione: etichetta nascosta (`.labelsHidden()`) e "80" passato come `prompt:` così è il
+    // vero placeholder grigio DENTRO il campo. Larghezza 56pt + `.lineLimit(1)` per riga singola.
     private var addRow: some View {
         HStack(spacing: DS.Spacing.s) {
-            TextField("e.g. 80", text: self.$draft)
+            TextField("threshold", text: self.$draft, prompt: Text(verbatim: "80"))
+                .labelsHidden()
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 80)
+                .lineLimit(1)
+                .frame(width: 56)
                 .focused(self.$fieldFocused)
                 .onSubmit { self.commitDraft() }
             Text("%")
@@ -151,7 +161,7 @@ private struct ThresholdChip: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: DS.Spacing.xs) {
             Text("\(self.value)%")
                 .font(.dsMono)
                 .foregroundStyle(.primary)
@@ -159,13 +169,20 @@ private struct ThresholdChip: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(.secondary)
+                    // Tondino neutro dietro la "x": hit target più ampio e look più rifinito.
+                    .frame(width: 14, height: 14)
+                    .background(Circle().fill(Color.primary.opacity(0.06)))
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Remove threshold \(self.value)%")
         }
-        .padding(.horizontal, DS.Spacing.s)
-        .padding(.vertical, 4)
+        .padding(.leading, DS.Spacing.m)
+        .padding(.trailing, DS.Spacing.xs)
+        .padding(.vertical, DS.Spacing.xs)
+        // Capsule neutra (vetro monocromo): sfondo tenue + hairline appena percettibile.
         .background(Capsule(style: .continuous).fill(Color.primary.opacity(0.08)))
+        .overlay(Capsule(style: .continuous).strokeBorder(Color.primary.opacity(0.06), lineWidth: 1))
     }
 }
 
