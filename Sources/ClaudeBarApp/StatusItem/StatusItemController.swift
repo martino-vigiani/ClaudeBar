@@ -125,6 +125,12 @@ final class StatusItemController {
         self.panelHost.toggle(relativeTo: button)
     }
 
+    /// Chiude il pannello. Usato prima di aprire le Preferenze: il pannello è floating a livello
+    /// `.statusBar` e coprirebbe la finestra Impostazioni.
+    func closePanel() {
+        self.panelHost.close()
+    }
+
     func attach(model: AppModel) {
         self.model = model
     }

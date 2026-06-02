@@ -47,6 +47,10 @@ final class AppModel {
     /// Collegato dall'AppDelegate dopo l'install dello status item (evita ciclo di init).
     private weak var statusController: StatusItemController?
 
+    /// Finestra Impostazioni gestita a mano (la scene `Settings` di SwiftUI non si apre in modo
+    /// affidabile per un'app accessory). Creata pigramente al primo `openPreferences()`.
+    private let settingsWindow = SettingsWindowController()
+
     private let logger = Logger(subsystem: AppInfo.bundleIdentifier, category: "app-model")
 
     // Errori dei due sottosistemi, tracciati separatamente e fusi in `status` con priorità.
@@ -276,10 +280,10 @@ final class AppModel {
     }
 
     func openPreferences() {
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        // Fallback per macOS che usa ancora showPreferencesWindow:
-        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        // Il pannello è un NSPanel floating a livello .statusBar non-activating: la finestra
+        // Impostazioni si aprirebbe DIETRO di esso. Chiudilo prima, poi mostra la nostra finestra.
+        self.statusController?.closePanel()
+        self.settingsWindow.show(settings: self.settings)
     }
 
     func quit() {

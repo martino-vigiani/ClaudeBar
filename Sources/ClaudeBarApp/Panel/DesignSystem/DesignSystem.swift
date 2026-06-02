@@ -62,13 +62,15 @@ extension Font {
     static func dsDisplay(_ size: CGFloat = 28) -> Font {
         .system(size: size, weight: .semibold, design: .rounded).monospacedDigit()
     }
-    static let dsTitle = Font.system(size: 15, weight: .semibold)
-    static let dsHeadline = Font.system(size: 13, weight: .medium)
-    static let dsBody = Font.system(size: 13, weight: .regular)
-    static let dsMono = Font.system(size: 12, weight: .regular, design: .monospaced)
-    static let dsCaption = Font.system(size: 11, weight: .regular)
+    // Text style semantici (non size fisse) → scalano con Dynamic Type. Le size base restano vicine
+    // ai valori precedenti su macOS: title3 15, body 13, callout 12, caption 10, caption2 10.
+    static let dsTitle = Font.title3.weight(.semibold)
+    static let dsHeadline = Font.body.weight(.medium)
+    static let dsBody = Font.body
+    static let dsMono = Font.system(.callout, design: .monospaced)
+    static let dsCaption = Font.caption
     /// Eyebrow / micro-badge sezione (UPPERCASE + tracking).
-    static let dsEyebrow = Font.system(size: 10, weight: .semibold)
+    static let dsEyebrow = Font.caption2.weight(.semibold)
 }
 
 // MARK: - Stato d'uso e scala di colore semantica

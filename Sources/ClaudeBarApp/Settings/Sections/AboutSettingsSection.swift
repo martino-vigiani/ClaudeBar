@@ -26,7 +26,7 @@ struct AboutSettingsSection: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
                     Text(AppInfo.displayName)
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.title.weight(.semibold))
                     Text("Versione \(AppInfo.shortVersion) (\(AppInfo.buildNumber))")
                         .font(.dsBody)
                         .foregroundStyle(.secondary)

@@ -6,6 +6,12 @@ Package.resolved
 # Bundle prodotto
 *.app
 
+# DMG distribuibile (va come asset di una Release, non nel repo)
+*.dmg
+
+# Asset derivati (rigenerabili da Assets/AppIcon-1024.png via Scripts/make_icon.swift)
+Assets/AppIcon-masked.png
+
 # macOS
 .DS_Store
 
