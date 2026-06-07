@@ -25,6 +25,10 @@ final class AppModel {
     private(set) var indexingProgress: Double?
     /// `true` durante un fetch dei limiti (per lo spinner del bottone refresh nell'header).
     private(set) var isRefreshingLimits = false
+    /// `true` mentre è in corso una RICONNESSIONE (primo fetch userInitiated + poll bounded del
+    /// refresh pigro della CLI). La UI mostra "riconnessione in corso" sul bottone Reconnect: senza
+    /// questo, dopo aver messo la password il bottone sembrerebbe inerte finché la CLI non rinnova.
+    private(set) var isReconnecting = false
     private(set) var lastLimitsRefresh: Date?
     private(set) var lastAnalyticsRefresh: Date?
     /// Range selezionato per la sezione analytics (gestito qui per l'adapter UI).
@@ -62,13 +66,24 @@ final class AppModel {
     /// forzare la rigenerazione del report aggregato — altrimenti il numero non cambierebbe.
     private var lastIncludeSubagents: Bool
 
+    /// Task del poll di riconnessione in corso (raccoglie il refresh pigro della CLI dopo che il
+    /// token è scaduto). Tenuto qui per garantire UN SOLO poll attivo: una nuova `reconnect()`
+    /// cancella il precedente prima di ripartire, evitando poll concorrenti che si calpestano.
+    private var reconnectPollTask: Task<Void, Never>?
+
+    /// Ritardi (in secondi) tra i tentativi del poll di riconnessione, backoff crescente. In
+    /// produzione la somma è ≈45s (la CLI può metterci qualche secondo a rinnovare il token);
+    /// iniettabile per i test, che usano ritardi piccolissimi per non rallentare la suite.
+    private let reconnectPollDelays: [Double]
+
     init(
         limitsService: any LimitsServicing,
         indexer: any TranscriptIndexing,
         persistence: any PersistenceServicing,
         settings: SettingsStore,
         notifications: AppNotifications = AppNotifications(),
-        registry: ProviderRegistry? = nil)
+        registry: ProviderRegistry? = nil,
+        reconnectPollDelays: [Double] = [2, 3, 4, 5, 6, 7, 8, 10])
     {
         self.limitsService = limitsService
         self.indexer = indexer
@@ -76,6 +91,7 @@ final class AppModel {
         self.settings = settings
         self.notifications = notifications
         self.registry = registry
+        self.reconnectPollDelays = reconnectPollDelays
         self.analyticsRange = settings.defaultAnalyticsRange
         self.lastIncludeSubagents = settings.includeSubagentsInAnalytics
     }
@@ -162,6 +178,69 @@ final class AppModel {
         }
         self.recomputeStatus()
         self.recomputeGlance()
+    }
+
+    /// Riconnessione resiliente (bottone **Reconnect** del pannello, stato no-auth).
+    ///
+    /// Perché serve un metodo dedicato e non basta `refreshLimitsNow(userInitiated: true)`:
+    /// quando il token OAuth di Claude Code è scaduto, è la CLI a rinnovarlo — in modo PIGRO, solo
+    /// quando gira. ClaudeBar non può rubarle il refresh (regola d'oro del progetto). Quindi un
+    /// singolo refresh, anche dopo che l'utente ha inserito la password del Keychain, fallisce
+    /// ancora con "token scaduto" finché la CLI non ha rinnovato → il bottone sembra "rotto".
+    ///
+    /// Strategia:
+    ///  1. Un fetch `userInitiated: true` SUBITO: così il Keychain può promptare ADESSO (sblocca
+    ///     l'accesso alle credenziali), senza aspettare che la box di reinserimento compaia da sola.
+    ///  2. Se dopo questo lo stato è ancora `.tokenExpired`/`.keychainDenied`, avvia un poll BOUNDED
+    ///     (no-UI, nessun ulteriore prompt) che ri-tenta a intervalli crescenti fino a ~45s: appena
+    ///     la CLI rinnova il token, il primo reread no-UI riuscito riporta lo stato a `.ready`/`.stale`
+    ///     e il poll si ferma. Così l'utente "riconnette" una volta e il recupero è automatico.
+    func reconnect() async {
+        // Un solo poll alla volta: una nuova riconnessione annulla quello in volo.
+        self.reconnectPollTask?.cancel()
+        self.reconnectPollTask = nil
+
+        self.isReconnecting = true
+        defer { self.isReconnecting = false }
+
+        // 1) Tentativo immediato CON UI: è qui che il Keychain mostra il prompt, non più tardi.
+        await self.refreshLimitsNow(userInitiated: true)
+
+        // Il poll no-UI ha senso SOLO se siamo bloccati su "token scaduto": è lo scenario in cui la
+        // CLI deve ancora rinnovare e ogni tick può intercettare il token nuovo (confermato da
+        // core-fix: la cache non trattiene creds scadute, il reread no-UI vede il token fresco).
+        // Per gli ALTRI stati il poll non aiuta e NON va avviato:
+        //  - .keychainDenied → lettura no-UI negata / ACL resettato dalla riscrittura della CLI: solo
+        //    un fetch userInitiated (prompt) ri-autorizza → l'utente ripreme Reconnect.
+        //  - .ready/.stale → già riconnesso. Qualsiasi altro errore → non è risolvibile pollando.
+        guard self.statusIsTokenExpired else { return }
+
+        // 2) Poll bounded no-UI per raccogliere il refresh pigro della CLI. Awaitato in modo che
+        //    `isReconnecting` resti true (UI "riconnessione in corso") finché il poll non finisce.
+        let delays = self.reconnectPollDelays
+        let task = Task { @MainActor [weak self] in
+            // Backoff crescente, somma ≈ 45s in produzione: la CLI può metterci qualche secondo.
+            for seconds in delays {
+                try? await Task.sleep(for: .seconds(seconds))
+                guard let self, !Task.isCancelled else { return }
+                // Reread NO-UI: nessun prompt. Se la CLI ha rinnovato, ora riesce.
+                await self.refreshLimitsNow(userInitiated: false)
+                // Fermati appena lo stato NON è più "token scaduto": o siamo tornati ready (successo),
+                // o siamo passati a keychainDenied/rateLimited/error — casi che il poll no-UI non
+                // risolve (ACL reset richiede prompt, gate 429 va atteso). Continuare girerebbe a vuoto.
+                if !self.statusIsTokenExpired { return }
+            }
+        }
+        self.reconnectPollTask = task
+        await task.value
+        self.reconnectPollTask = nil
+    }
+
+    /// `true` quando lo stato è esattamente "token scaduto" — l'UNICA condizione in cui il poll no-UI
+    /// può fare progresso (aspetta il rinnovo pigro della CLI). keychainDenied/rateLimited/error NON
+    /// sono superabili pollando (servono prompt / attesa del gate), quindi sono esclusi di proposito.
+    private var statusIsTokenExpired: Bool {
+        self.status == .tokenExpired
     }
 
     /// Fetcha lo snapshot unificato del provider attivo e ne aggiorna lo stato.
@@ -274,6 +353,10 @@ final class AppModel {
     }
 
     /// Risveglio dal sleep / ritorno connettività → refresh on-demand (no-UI), se abilitato.
+    /// `userInitiated: false` è VOLUTO: al risveglio il refresh è automatico, NON un'azione esplicita
+    /// dell'utente, quindi il Keychain non deve MAI promptare qui (sarebbe il bug "chiede la password
+    /// ogni volta che il Mac si sveglia"). Se il token è scaduto, il reread no-UI fallisce in silenzio
+    /// e lo stato passa a no-auth: la riconnessione esplicita (con prompt) la fa il bottone Reconnect.
     func handleWake() {
         guard self.settings.refreshOnWake else { return }
         Task { await self.refreshLimitsNow(userInitiated: false) }

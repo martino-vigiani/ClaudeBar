@@ -5,14 +5,21 @@ import Foundation
 // gate 429 locale (mostra cache con badge stale), cache in memoria dell'ultimo snapshot.
 
 public actor ClaudeLimitsService {
+    /// Seam di lettura del Keychain (owner Claude CLI): iniettabile per i test.
+    /// Default = chiamata statica reale a `KeychainReader.readMostRecent(allowUI:)`.
+    public typealias CredentialReader = @Sendable (_ allowUI: Bool) throws -> KeychainReader.ReadResult?
+
     private let session: URLSession
     private let claudeCodeVersion: String?
     private let environment: [String: String]
     private let now: @Sendable () -> Date
+    private let credentialReader: CredentialReader
 
     /// Ultimo snapshot riuscito (per cachedSnapshot / degradazione su 429).
     private var lastSnapshot: LimitsSnapshot?
-    /// Cache credenziali in memoria (owner .claudeBar dopo un refresh nostro).
+    /// Cache credenziali in memoria: read-through delle creds CLI (owner .claudeCLI)
+    /// e creds rinnovate da noi (owner .claudeBar). Serve a non ricolpire il Keychain
+    /// a ogni fetch dentro la validità del token → niente prompt password ripetuti.
     private var cachedCredentials: CredentialRecord?
     /// Gate 429: non rifacciamo la GET prima di questo istante.
     private var blockedUntil: Date?
@@ -21,12 +28,14 @@ public actor ClaudeLimitsService {
         session: URLSession = ClaudeLimitsService.makeSession(),
         claudeCodeVersion: String? = nil,
         environment: [String: String] = ProcessInfo.processInfo.environment,
-        now: @escaping @Sendable () -> Date = { Date() })
+        now: @escaping @Sendable () -> Date = { Date() },
+        credentialReader: @escaping CredentialReader = { try KeychainReader.readMostRecent(allowUI: $0) })
     {
         self.session = session
         self.claudeCodeVersion = claudeCodeVersion
         self.environment = environment
         self.now = now
+        self.credentialReader = credentialReader
     }
 
     /// URLSession dedicata: timeout 30s, no cookie, no cache su disco.
@@ -59,8 +68,10 @@ public actor ClaudeLimitsService {
         // 1. Carica credenziali (env → cache memoria → Keychain).
         let record = try loadRecord(allowUI: userInitiated)
 
-        // 2. Se scaduto, applica la regola di refresh per owner.
-        let credentials = try await resolveFreshCredentials(record: record)
+        // 2. Se scaduto, applica la regola di refresh per owner. Su un Reconnect
+        //    (userInitiated) il reread del Keychain può promptare → raccoglie un eventuale
+        //    refresh appena scritto dalla CLI (item riscritto = ACL "Always Allow" nuovo).
+        let credentials = try await resolveFreshCredentials(record: record, allowUI: userInitiated)
 
         // 3. GET usage.
         do {
@@ -109,19 +120,27 @@ public actor ClaudeLimitsService {
 
         // 3. Keychain (sorgente primaria su macOS). File ~/.claude/.credentials.json non
         //    presente sul sistema dell'utente; il Keychain copre il caso reale.
-        guard let result = try KeychainReader.readMostRecent(allowUI: allowUI) else {
+        guard let result = try credentialReader(allowUI) else {
             throw ClaudeLimitsError.noCredentials
         }
         let creds = try ClaudeOAuthCredentials.parse(data: result.data)
-        return CredentialRecord(
+        let record = CredentialRecord(
             credentials: creds,
             owner: .claudeCLI,
             source: .claudeKeychain,
             accountLabel: result.account)
+        // Read-through cache: serviamo i prossimi fetch dalla memoria finché il token è
+        // valido, senza ricolpire il Keychain (→ niente prompt password ripetuti). Non
+        // rinnoviamo noi il token CLI: quando scade, lo step 2 cade e rileggiamo il
+        // Keychain (la CLI nel frattempo lo avrà rinnovato).
+        cachedCredentials = record
+        return record
     }
 
     /// Se il token è scaduto, applica la regola di refresh in base all'owner.
-    private func resolveFreshCredentials(record: CredentialRecord) async throws -> ClaudeOAuthCredentials {
+    /// - Parameter allowUI: propagato al reread del Keychain (owner .claudeCLI) → su un
+    ///   Reconnect userInitiated il reread può promptare; in background resta no-UI.
+    private func resolveFreshCredentials(record: CredentialRecord, allowUI: Bool) async throws -> ClaudeOAuthCredentials {
         let creds = record.credentials
         guard creds.isExpired else { return creds }
 
@@ -129,10 +148,16 @@ public actor ClaudeLimitsService {
         case .claudeCLI:
             // NON rubiamo il refresh alla CLI: rileggiamo il Keychain (Claude potrebbe aver
             // già rinnovato). Se ancora scaduto, deleghiamo.
-            if let reread = try? KeychainReader.readMostRecent(allowUI: false),
+            if let reread = try? credentialReader(allowUI),
                let fresh = try? ClaudeOAuthCredentials.parse(data: reread.data),
                !fresh.isExpired
             {
+                // Aggiorna la read-through cache con le creds appena rinnovate dalla CLI.
+                cachedCredentials = CredentialRecord(
+                    credentials: fresh,
+                    owner: .claudeCLI,
+                    source: .claudeKeychain,
+                    accountLabel: reread.account)
                 return fresh
             }
             throw ClaudeLimitsError.refreshDelegatedToCLI

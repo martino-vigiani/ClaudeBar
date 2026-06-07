@@ -75,6 +75,10 @@ struct NoAuthView: View {
     var providerName: String = "Claude"
     /// Messaggio guida (sovrascrivibile per i provider a consumo: "inserisci la API key…").
     var message: String?
+    /// Riconnessione in corso: il bottone diventa "Reconnecting…" e si disabilita, così l'utente
+    /// vede che dopo la password l'app sta lavorando (sta aspettando il refresh pigro della CLI) e
+    /// non lo percepisce come inerte. Riusa `isRefreshing` dell'AppModel via l'adapter.
+    var isReconnecting: Bool = false
 
     private var resolvedMessage: String {
         message ?? String(localized: "Sign in with Claude Code to see your session and weekly limits.")
@@ -91,8 +95,10 @@ struct NoAuthView: View {
             HStack(spacing: DS.Spacing.s) {
                 Button("How to", action: onHowTo)
                     .buttonStyle(PanelActionButtonStyle(role: .secondary))
-                Button("Reconnect", action: onReconnect)
+                Button(isReconnecting ? String(localized: "Reconnecting…") : String(localized: "Reconnect"),
+                       action: onReconnect)
                     .buttonStyle(PanelActionButtonStyle(role: .prominent))
+                    .disabled(isReconnecting)
                 Spacer(minLength: 0)
             }
             .padding(.top, DS.Spacing.xs)

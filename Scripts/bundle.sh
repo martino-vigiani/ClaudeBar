@@ -110,15 +110,23 @@ if [[ -z "$SIGN_IDENTITY" && "${CLBAR_SIGN:-0}" != "1" ]]; then
     | awk 'match($0, /[0-9A-F]{40}/) { print substr($0, RSTART, 40); exit }')
 fi
 
+# `SIGN_MODE` riassume cosa è stato fatto, così il riepilogo finale dice ESPLICITAMENTE se la
+# build è firmata stabile o ad-hoc — è la terza causa dei ri-prompt del Keychain ("Always Allow"
+# non persiste con firma instabile). Se l'utente vede ri-prompt continui, qui capisce il perché.
 if [[ -n "$SIGN_IDENTITY" ]]; then
   echo "==> Firma con identità stabile: $SIGN_IDENTITY"
   codesign --force --deep --sign "$SIGN_IDENTITY" --identifier "$BUNDLE_ID" "$APP"
+  SIGN_MODE="stabile ($SIGN_IDENTITY) → 'Always Allow' del Keychain PERSISTE"
 elif [[ "${CLBAR_SIGN:-0}" == "1" ]]; then
   echo "==> Firma ad-hoc (cambia a ogni build → il Keychain richiederà la password ogni volta)…"
   codesign --force --deep --sign - "$APP"
+  SIGN_MODE="ad-hoc (CLBAR_SIGN=1) → cambia a OGNI build, il Keychain RI-CHIEDE la password"
+else
+  SIGN_MODE="nessuna ri-firma (firma ad-hoc del linker) → instabile, il Keychain può RI-CHIEDERE"
 fi
 
 echo "==> Creato $APP"
 echo "    bundle id : $BUNDLE_ID"
 echo "    versione  : $VERSION ($BUILD_NUMBER)"
 echo "    config    : $CONFIG"
+echo "    firma     : $SIGN_MODE"

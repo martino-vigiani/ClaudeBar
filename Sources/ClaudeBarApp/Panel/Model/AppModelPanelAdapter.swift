@@ -48,8 +48,12 @@ final class AppModelPanelAdapter: PanelViewModeling {
 
     /// Lo spinner del bottone refresh riflette QUALSIASI refresh in corso: il bottone
     /// innesca sia il fetch dei limiti sia l'ingest analytics, quindi gira finché uno dei
-    /// due è attivo (isRefreshingLimits oppure full-index analytics).
-    var isRefreshing: Bool { self.model.isRefreshingLimits || self.model.indexingProgress != nil }
+    /// due è attivo (isRefreshingLimits oppure full-index analytics). Include anche
+    /// `isReconnecting`: durante il poll di riconnessione lo spinner resta continuo (tra un
+    /// tentativo e l'altro `isRefreshingLimits` torna false, ma la riconnessione è ancora in corso).
+    var isRefreshing: Bool {
+        self.model.isRefreshingLimits || self.model.isReconnecting || self.model.indexingProgress != nil
+    }
 
     // MARK: - Finestre
 
@@ -141,7 +145,10 @@ final class AppModelPanelAdapter: PanelViewModeling {
     }
 
     func reconnect() {
-        Task { await self.model.refreshLimitsNow(userInitiated: true) }
+        // Riconnessione resiliente: prompt Keychain SUBITO + poll bounded del refresh pigro della
+        // CLI (vedi AppModel.reconnect). Non un semplice refresh: dopo aver messo la password il
+        // token può essere ancora scaduto finché la CLI non rinnova, e il poll lo recupera da solo.
+        Task { await self.model.reconnect() }
     }
 
     func setRange(_ range: AnalyticsRange) {

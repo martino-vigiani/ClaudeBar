@@ -126,7 +126,8 @@ struct PanelContentView<Model: PanelViewModeling>: View {
                 onReconnect: { model.reconnect() },
                 onHowTo: { model.openSettings() },
                 providerName: model.activeProvider?.name ?? "Claude",
-                message: noAuthMessage)
+                message: noAuthMessage,
+                isReconnecting: model.isRefreshing)
 
         case .noSubscription:
             NoSubscriptionView()
