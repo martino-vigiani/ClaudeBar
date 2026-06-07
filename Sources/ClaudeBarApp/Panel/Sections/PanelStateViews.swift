@@ -99,6 +99,9 @@ struct NoAuthView: View {
                        action: onReconnect)
                     .buttonStyle(PanelActionButtonStyle(role: .prominent))
                     .disabled(isReconnecting)
+                    // La label cambia ("Reconnect"→"Reconnecting…"): fissiamo il comando Voice
+                    // Control su "Reconnect" così resta invocabile anche durante la riconnessione.
+                    .accessibilityInputLabels([String(localized: "Reconnect")])
                 Spacer(minLength: 0)
             }
             .padding(.top, DS.Spacing.xs)

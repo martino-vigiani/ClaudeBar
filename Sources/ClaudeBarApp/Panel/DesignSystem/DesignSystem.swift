@@ -46,6 +46,9 @@ enum DS {
     enum Motion {
         /// Molla morbida "premium" (~cubic-bezier(0.32,0.72,0,1)) per apertura/morphing.
         static let soft = Animation.interpolatingSpring(stiffness: 180, damping: 22)
+        /// Riempimento "strumento vivo" dell'anello: molla con micro-overshoot al tip
+        /// (più reattiva di `soft`) per il count-up e i cambi di quota dell'arco.
+        static let gauge = Animation.interpolatingSpring(stiffness: 170, damping: 18)
         /// Cambi di valore live (numero, barra).
         static let smooth = Animation.smooth(duration: 0.45)
         /// Interpolazione cromatica (no scatto).

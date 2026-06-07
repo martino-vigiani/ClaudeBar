@@ -232,8 +232,12 @@ final class AppModel {
             }
         }
         self.reconnectPollTask = task
+        // Awaitato così `isReconnecting` (spinner UI) resta true finché il poll non finisce.
+        // NON azzeriamo qui `reconnectPollTask`: se nel frattempo è partito un nuovo reconnect()
+        // avrebbe già sostituito il riferimento, e azzerarlo perderebbe l'handle del task più
+        // recente (un eventuale terzo reconnect non lo cancellerebbe). Un task finito lasciato lì
+        // è innocuo: il prossimo reconnect() lo cancella (no-op) e lo rimpiazza.
         await task.value
-        self.reconnectPollTask = nil
     }
 
     /// `true` quando lo stato è esattamente "token scaduto" — l'UNICA condizione in cui il poll no-UI
