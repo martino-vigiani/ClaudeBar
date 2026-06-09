@@ -17,18 +17,23 @@ final class SettingsWindowController {
         if self.window == nil {
             let hosting = NSHostingController(rootView: SettingsRootView(settings: settings))
 
-            // Finestra Impostazioni NATIVA (look "System Settings"/Klack): style mask standard, senza
-            // `.fullSizeContentView`/titlebar trasparente. Una NSWindow titled ha già angoli
-            // arrotondati nativi; ospitando una `NavigationSplitView` la sidebar adotta da sé il
-            // materiale translucido di sistema (`.sidebar`) che fonde con la titlebar — esattamente
-            // il vetro NEUTRO voluto (DECISIONS §3), senza alcun NSVisualEffectView manuale.
+            // Finestra Impostazioni look "System Settings" nativo: titlebar TRASPARENTE + contenuto a
+            // tutta altezza (`.fullSizeContentView`), titolo nascosto. Così la sidebar `.sidebar`
+            // sale fino in cima dietro ai semafori (niente "barra sopra" staccata col separatore) e
+            // fonde col resto — esattamente la System Settings di macOS. Vetro NEUTRO (DECISIONS §3),
+            // nessun NSVisualEffectView manuale.
             //
-            // Niente `.fullSizeContentView` ⇒ il contenuto parte SOTTO la titlebar e non viene più
-            // tagliato (era il bug della prima riga "Default provider …" mezza nascosta in alto).
+            // Il vecchio timore del clip ("Default provider …" tagliata in alto) non si applica più: il
+            // detail è un `Form(.grouped)` scrollabile e con `.fullSizeContentView` SwiftUI inserisce
+            // da sé la safe-area della titlebar in cima a sidebar e contenuto → niente taglio.
             let window = NSWindow(contentViewController: hosting)
             window.title = NSLocalizedString("Settings", comment: "Settings window title")
-            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+            // Titolo VISIBILE (mostra la sezione via navigationTitle) ma titlebar TRASPARENTE: così
+            // la titlebar riserva la sua altezza → il detail si inserisce sotto (niente clip), mentre
+            // il materiale `.sidebar` sale dietro la titlebar trasparente (niente barra opaca/separatore).
             window.titleVisibility = .visible
+            window.titlebarAppearsTransparent = true
             window.isReleasedWhenClosed = false
             window.identifier = NSUserInterfaceItemIdentifier("claudebar.settings")
             window.setContentSize(NSSize(width: 700, height: 560))
