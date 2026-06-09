@@ -147,8 +147,7 @@ struct AdvancedSettingsSection: View {
         HStack(spacing: DS.Spacing.xs) {
             if busy {
                 ProgressView()
-                    .controlSize(.small)
-                    .scaleEffect(0.7)
+                    .controlSize(.mini)
             }
             Text(title)
         }

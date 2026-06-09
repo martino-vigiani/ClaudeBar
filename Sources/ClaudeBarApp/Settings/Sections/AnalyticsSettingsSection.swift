@@ -64,7 +64,7 @@ struct AnalyticsSettingsSection: View {
                 .toggleStyle(.switch)
             Text("On the Max plan the cost isn't a real expense: it's the list value of the consumed tokens (API-equivalent estimate).")
                 .font(.dsCaption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -157,7 +157,7 @@ private struct PricingOverrideRow: View {
     private var emptyState: some View {
         Text("No override: the app uses the built-in price table.")
             .font(.dsCaption)
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(.secondary)
     }
 
     // MARK: Import / rimozione

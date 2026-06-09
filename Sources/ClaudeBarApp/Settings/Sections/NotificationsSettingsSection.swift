@@ -93,7 +93,7 @@ private struct ThresholdEditor: View {
             if self.thresholds.isEmpty {
                 Text("No thresholds: you won't get session warnings until you add one.")
                     .font(.dsCaption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 self.chips

@@ -171,6 +171,21 @@ enum IconRenderer {
             alpha: 1)
     }
 
+    /// Adatta il colore-dato al contrasto della menu bar. Su sfondo CHIARO (Tahoe light) il verde
+    /// e l'ambra accesi staccano poco → li scuriamo del ~15% in luminanza (mantenendo la tinta,
+    /// quindi la semantica della curva). Su scuro il colore resta invariato. Solo per il colore
+    /// semantico: in monocromo è il sistema a gestire il template B/N.
+    private static func contrastAdjusted(_ color: NSColor, light: Bool) -> NSColor {
+        guard light else { return color }
+        let c = color.usingColorSpace(.sRGB) ?? color
+        let f: CGFloat = 0.85
+        return NSColor(
+            srgbRed: c.redComponent * f,
+            green: c.greenComponent * f,
+            blue: c.blueComponent * f,
+            alpha: c.alphaComponent)
+    }
+
     // MARK: - Disegno
 
     private static func draw(_ spec: GlanceIconSpec, phase: CGFloat) -> NSImage {
@@ -210,7 +225,10 @@ enum IconRenderer {
         let radius = rect.width / 2 - lineWidth / 2
 
         // Colore semantico (o label color in monocromo). DIM abbassa l'opacità senza falsare il colore.
-        let baseColor: NSColor = spec.monochrome ? .labelColor : self.color(forUsed: spec.used)
+        let isLight = spec.appearance == .light
+        let baseColor: NSColor = spec.monochrome
+            ? .labelColor
+            : self.contrastAdjusted(self.color(forUsed: spec.used), light: isLight)
         let dimFactor: CGFloat = spec.dim ? 0.45 : 1.0
 
         // Pulsazione: nello stato `.empty` (≥95%) l'opacità oscilla. Reduce Motion → gestito a monte
@@ -268,7 +286,7 @@ enum IconRenderer {
         if spec.style == .dualBar, let weekly = spec.weeklyUsed {
             let innerRadius = radius - lineWidth - 1.2
             if innerRadius > 1 {
-                let weeklyColor = (spec.monochrome ? NSColor.labelColor : self.color(forUsed: weekly))
+                let weeklyColor = (spec.monochrome ? NSColor.labelColor : self.contrastAdjusted(self.color(forUsed: weekly), light: isLight))
                     .withAlphaComponent(0.30 * dimFactor)
                 ctx.setLineWidth(1.6)
                 ctx.setStrokeColor(weeklyColor.cgColor)
@@ -277,7 +295,7 @@ enum IconRenderer {
 
                 let w = max(0, min(weekly, 1))
                 if w > 0.0001 {
-                    let weeklyFill = (spec.monochrome ? NSColor.labelColor : self.color(forUsed: weekly))
+                    let weeklyFill = (spec.monochrome ? NSColor.labelColor : self.contrastAdjusted(self.color(forUsed: weekly), light: isLight))
                         .withAlphaComponent(dimFactor)
                     ctx.setStrokeColor(weeklyFill.cgColor)
                     ctx.addArc(
@@ -304,7 +322,9 @@ enum IconRenderer {
         }
 
         let dimFactor: CGFloat = spec.dim ? 0.5 : 1.0
-        let textColor: NSColor = spec.monochrome ? .labelColor : self.color(forUsed: spec.used)
+        let textColor: NSColor = spec.monochrome
+            ? .labelColor
+            : self.contrastAdjusted(self.color(forUsed: spec.used), light: spec.appearance == .light)
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 9.5, weight: .semibold),
             .foregroundColor: textColor.withAlphaComponent(dimFactor),
