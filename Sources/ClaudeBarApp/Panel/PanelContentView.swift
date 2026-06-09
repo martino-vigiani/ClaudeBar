@@ -33,9 +33,15 @@ struct PanelContentView<Model: PanelViewModeling>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var statusColor: Color {
-        guard let w = model.criticalWindow else { return .secondary }
         // Glance della finestra critica → curva parametrica con le soglie utente (coerente icona).
-        return w.glanceColor
+        if let w = model.criticalWindow { return w.glanceColor }
+        // Nessuna finestra critica ma ci sono finestre (edge): rifletti lo stato della più usata
+        // invece di restare grigio neutro → pallino coerente con gli anelli sotto.
+        if let maxUsed = model.windows.map(\.utilization).max() {
+            return UsageColorScale.color(used: maxUsed)
+        }
+        // Davvero nessun dato (loading / no-auth): neutro.
+        return .secondary
     }
 
     var body: some View {
@@ -70,7 +76,11 @@ struct PanelContentView<Model: PanelViewModeling>: View {
                 if !model.windows.isEmpty {
                     CollapseHandle(collapsed: $topCollapsed)
                 } else {
-                    Divider().overlay(Color.primary.opacity(0.06))
+                    // Stesso peso visivo della hairline del CollapseHandle (coerenza tra stati).
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.06))
+                        .frame(height: DS.Size.hairline)
+                        .frame(maxWidth: .infinity)
                 }
 
                 ScrollView {
@@ -183,6 +193,7 @@ struct PanelContentView<Model: PanelViewModeling>: View {
 
 private struct CollapseHandle: View {
     @Binding var collapsed: Bool
+    @State private var hovering = false
 
     var body: some View {
         Button {
@@ -192,21 +203,24 @@ private struct CollapseHandle: View {
                 hairline
                 Image(systemName: collapsed ? "chevron.down" : "chevron.up")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(hovering ? Color.primary : Color.secondary)
                 hairline
             }
             .contentShape(Rectangle())
             .padding(.vertical, 2)
         }
         .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.14), value: hovering)
         .help(collapsed ? "Show limits detail" : "Collapse to rings — more analytics")
         .accessibilityLabel(collapsed ? Text("Show limits detail") : Text("Collapse limits to rings"))
         .accessibilityAddTraits(.isButton)
     }
 
+    // Hairline che si accende lievemente su hover → segnala che la riga è una maniglia.
     private var hairline: some View {
         Rectangle()
-            .fill(Color.primary.opacity(0.06))
+            .fill(Color.primary.opacity(hovering ? 0.12 : 0.06))
             .frame(height: DS.Size.hairline)
             .frame(maxWidth: .infinity)
     }

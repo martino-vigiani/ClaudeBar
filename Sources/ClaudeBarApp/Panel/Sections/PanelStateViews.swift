@@ -163,49 +163,67 @@ struct InfoBanner: View {
 private struct PanelActionButtonStyle: ButtonStyle {
     enum Role { case secondary, prominent }
     let role: Role
-    @Environment(\.colorScheme) private var scheme
 
     func makeBody(configuration: Configuration) -> some View {
-        let pressed = configuration.isPressed
-        return configuration.label
-            .font(.dsHeadline)
-            .foregroundStyle(labelColor)
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
-            .padding(.horizontal, DS.Spacing.m)
-            .frame(height: 28)
-            .background {
-                Capsule(style: .continuous).fill(fill(pressed: pressed))
-            }
-            .overlay {
-                if role == .secondary {
-                    Capsule(style: .continuous)
-                        .strokeBorder(Color.primary.opacity(scheme == .dark ? 0.16 : 0.14),
-                                      lineWidth: DS.Size.hairline)
+        ActionButtonBody(configuration: configuration, role: role)
+    }
+
+    private struct ActionButtonBody: View {
+        let configuration: Configuration
+        let role: Role
+        @Environment(\.colorScheme) private var scheme
+        @State private var hovering = false
+
+        var body: some View {
+            let pressed = configuration.isPressed
+            return configuration.label
+                .font(.dsHeadline)
+                .foregroundStyle(labelColor)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, DS.Spacing.m)
+                .frame(height: 28)
+                .background {
+                    Capsule(style: .continuous).fill(fill(pressed: pressed, hovering: hovering))
                 }
-            }
-            .contentShape(Capsule(style: .continuous))
-            .opacity(pressed ? 0.85 : 1)
-            .animation(.easeOut(duration: 0.12), value: pressed)
-    }
-
-    /// Colore label: il prominent ha un fill graphite "pieno", quindi serve il colore di
-    /// contrasto (chiaro su light dove il fill è scuro, scuro su dark dove il fill è chiaro).
-    private var labelColor: Color {
-        switch role {
-        case .prominent: scheme == .dark ? .primary : Color(nsColor: .windowBackgroundColor)
-        case .secondary: .secondary
+                .overlay {
+                    if role == .secondary {
+                        Capsule(style: .continuous)
+                            .strokeBorder(Color.primary.opacity(scheme == .dark ? 0.16 : 0.14),
+                                          lineWidth: DS.Size.hairline)
+                    }
+                }
+                .contentShape(Capsule(style: .continuous))
+                .opacity(pressed ? 0.85 : 1)
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: pressed)
+                .animation(.easeOut(duration: 0.14), value: hovering)
         }
-    }
 
-    private func fill(pressed: Bool) -> Color {
-        switch role {
-        case .prominent:
-            // Graphite neutro: scuro su light, chiaro su dark — leggibile, mai blu.
-            let base = scheme == .dark ? Color.primary.opacity(0.16) : Color.primary.opacity(0.88)
-            return pressed ? base.opacity(scheme == .dark ? 0.24 : 0.78) : base
-        case .secondary:
-            return Color.primary.opacity(pressed ? 0.12 : 0.06)
+        /// Colore label: il prominent ha un fill graphite "pieno", quindi serve il colore di
+        /// contrasto (chiaro su light dove il fill è scuro, scuro su dark dove il fill è chiaro).
+        private var labelColor: Color {
+            switch role {
+            case .prominent: scheme == .dark ? .primary : Color(nsColor: .windowBackgroundColor)
+            case .secondary: .secondary
+            }
+        }
+
+        /// Fill: hover dà un gradino intermedio tra riposo e pressed → feedback prima del click.
+        private func fill(pressed: Bool, hovering: Bool) -> Color {
+            switch role {
+            case .prominent:
+                // Graphite neutro: scuro su light, chiaro su dark — leggibile, mai blu.
+                if scheme == .dark {
+                    let base = pressed ? 0.24 : (hovering ? 0.20 : 0.16)
+                    return Color.primary.opacity(base)
+                } else {
+                    let base = pressed ? 0.78 : (hovering ? 0.94 : 0.88)
+                    return Color.primary.opacity(base)
+                }
+            case .secondary:
+                return Color.primary.opacity(pressed ? 0.12 : (hovering ? 0.10 : 0.06))
+            }
         }
     }
 }

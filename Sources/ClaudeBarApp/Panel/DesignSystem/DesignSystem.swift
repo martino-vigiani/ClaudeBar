@@ -128,6 +128,37 @@ extension Color {
     // (DECISIONS.md §3): nessuna tinta sul glass.
 }
 
+// MARK: - Hover highlight (affordance puntatore, macOS)
+
+extension View {
+    /// Evidenziazione al passaggio del puntatore: un fill neutro che si intensifica su hover,
+    /// dietro al contenuto. Dà affordance "cliccabile" coerente a tutte le superfici tap del
+    /// pannello (disclosure, picker, switcher, maniglia) senza ripetere lo stesso `onHover`.
+    /// Trasparente a riposo (default) → si può applicare anche sopra elementi con sfondo proprio.
+    func dsHoverHighlight<S: Shape>(
+        in shape: S,
+        rest: Double = 0,
+        hover: Double = 0.08
+    ) -> some View {
+        modifier(HoverHighlight(shape: shape, rest: rest, hover: hover))
+    }
+}
+
+private struct HoverHighlight<S: Shape>: ViewModifier {
+    let shape: S
+    let rest: Double
+    let hover: Double
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(shape.fill(Color.primary.opacity(hovering ? hover : rest)))
+            .contentShape(shape)
+            .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.14), value: hovering)
+    }
+}
+
 // MARK: - Hairline + inset highlight (double-bezel §2.4)
 
 extension View {
