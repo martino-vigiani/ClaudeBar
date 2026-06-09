@@ -75,8 +75,8 @@ struct UsageCostSection: View {
                 .frame(height: 96)
             if self.cost.costEstimated, self.cost.showCostDisclaimer {
                 Text("API-equivalent estimate: some costs are estimated from the local price table.")
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(DS.Spacing.m)
@@ -110,7 +110,7 @@ private struct CostTile: View {
                 .contentTransition(.numericText())
             Text(self.footnote)
                 .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Spacing.m)

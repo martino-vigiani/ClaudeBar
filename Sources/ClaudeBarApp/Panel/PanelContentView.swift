@@ -24,6 +24,10 @@ struct PanelContentView<Model: PanelViewModeling>: View {
 
     @State private var showUsed = true
     @State private var appeared = false
+    /// Fascia limiti collassata ai soli 2 anelli → più spazio verticale alle analytics.
+    /// Controllata dalla `CollapseHandle` sotto la fascia. Vale solo col layout limiti
+    /// (anelli); negli stati error/no-auth non ci sono finestre da collassare.
+    @State private var topCollapsed = false
     @Namespace private var glassNS
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -35,7 +39,9 @@ struct PanelContentView<Model: PanelViewModeling>: View {
     }
 
     var body: some View {
-        GlassEffectContainer(spacing: DS.Spacing.l) {
+        // Collassabile solo quando c'è davvero la fascia anelli (layout limiti).
+        let collapsed = topCollapsed && !model.windows.isEmpty
+        return GlassEffectContainer(spacing: DS.Spacing.l) {
             VStack(alignment: .leading, spacing: DS.Spacing.l) {
                 PanelHeaderView(
                     account: model.account,
@@ -43,7 +49,8 @@ struct PanelContentView<Model: PanelViewModeling>: View {
                     lastUpdated: model.lastUpdated,
                     isRefreshing: model.isRefreshing,
                     onRefresh: { model.refresh() },
-                    onSettings: { model.openSettings() }
+                    onSettings: { model.openSettings() },
+                    onQuit: { model.quit() }
                 )
 
                 // Switcher provider (solo se ≥2 provider abilitati). Con 1 solo provider
@@ -57,7 +64,14 @@ struct PanelContentView<Model: PanelViewModeling>: View {
 
                 providerArea
 
-                Divider().overlay(Color.primary.opacity(0.06))
+                // Separatore interattivo: con le finestre presenti diventa una maniglia che
+                // collassa la fascia ai soli anelli (più aria alle analytics); altrimenti è un
+                // semplice divider (niente da collassare negli stati error/no-auth).
+                if !model.windows.isEmpty {
+                    CollapseHandle(collapsed: $topCollapsed)
+                } else {
+                    Divider().overlay(Color.primary.opacity(0.06))
+                }
 
                 ScrollView {
                     AnalyticsSection(
@@ -70,14 +84,14 @@ struct PanelContentView<Model: PanelViewModeling>: View {
                 // ALTEZZA ADATTIVA: lo ScrollView ha un cap (non più "riempi .infinity") così,
                 // con l'altezza del pannello non più fissa ma `maxHeight`, il pannello si ACCORCIA
                 // quando il contenuto è poco (es. loading/errore) invece di lasciare spazio vuoto.
-                // Sotto il cap del pannello, lo ScrollView si comprime e scrolla → nessun taglio.
-                // (Per tornare ad altezza fissa: ripristina `height: DS.Size.panelMaxHeight` sotto.)
-                .frame(maxHeight: 340)
+                // Collassando la fascia limiti il cap (e il pannello) crescono → la fascia
+                // analytics guadagna ~150pt invece di restare schiacciata.
+                .frame(maxHeight: collapsed ? 480 : 340)
             }
             .padding(DS.Spacing.xl)
         }
         .frame(width: DS.Size.panelWidth)
-        .frame(maxHeight: DS.Size.panelMaxHeight)
+        .frame(maxHeight: collapsed ? DS.Size.panelMaxHeightExpanded : DS.Size.panelMaxHeight)
         .background {
             GlassPanel { Color.clear }
         }
@@ -148,7 +162,7 @@ struct PanelContentView<Model: PanelViewModeling>: View {
     @ViewBuilder
     private var providerContent: some View {
         if !model.windows.isEmpty {
-            LimitsSection(windows: model.windows, showUsed: $showUsed)
+            LimitsSection(windows: model.windows, showUsed: $showUsed, collapsed: topCollapsed)
         } else if let cost = model.usageCost {
             UsageCostSection(cost: cost, credits: model.credits)
         } else if let credits = model.credits {
@@ -158,6 +172,43 @@ struct PanelContentView<Model: PanelViewModeling>: View {
                 credits: credits)
         }
         // Nessun blocco provider → solo analytics locali (degradazione elegante).
+    }
+}
+
+// MARK: - CollapseHandle (separatore interattivo fascia limiti ↔ analytics)
+//
+// Hairline su entrambi i lati + chevron centrato. Tap → collassa la fascia superiore ai soli
+// 2 anelli (via binding), liberando spazio per lo ScrollView analytics; ri-tap → ripristina
+// reset/pace/cap. Chevron verso l'alto = "comprimi", verso il basso = "espandi di nuovo".
+
+private struct CollapseHandle: View {
+    @Binding var collapsed: Bool
+
+    var body: some View {
+        Button {
+            withAnimation(DS.Motion.soft) { collapsed.toggle() }
+        } label: {
+            HStack(spacing: DS.Spacing.s) {
+                hairline
+                Image(systemName: collapsed ? "chevron.down" : "chevron.up")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                hairline
+            }
+            .contentShape(Rectangle())
+            .padding(.vertical, 2)
+        }
+        .buttonStyle(.plain)
+        .help(collapsed ? "Show limits detail" : "Collapse to rings — more analytics")
+        .accessibilityLabel(collapsed ? Text("Show limits detail") : Text("Collapse limits to rings"))
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var hairline: some View {
+        Rectangle()
+            .fill(Color.primary.opacity(0.06))
+            .frame(height: DS.Size.hairline)
+            .frame(maxWidth: .infinity)
     }
 }
 

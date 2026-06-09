@@ -164,6 +164,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     #if DEBUG
     @objc private func handleTogglePanelNotification() {
+        // Attiva l'app: il pannello è un NSPanel nonactivating e in un'app background (LSUIElement)
+        // un semplice orderFront non lo mostra a schermo. Necessario per la cattura headless.
+        NSApp.activate(ignoringOtherApps: true)
         self.statusController?.togglePanel()
     }
 

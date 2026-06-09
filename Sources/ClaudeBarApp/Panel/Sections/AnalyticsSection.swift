@@ -133,8 +133,8 @@ struct AnalyticsSection: View {
                 .frame(height: 96)
             if analytics.showCostDisclaimer {
                 Text("API-equivalent estimate: Max plans are flat-rate, this is not real spend.")
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(DS.Spacing.m)
@@ -166,6 +166,9 @@ struct AnalyticsSection: View {
                     Label(expanded ? "Show less" : "Show more",
                           systemImage: expanded ? "chevron.up" : "chevron.down")
                         .font(.dsHeadline)
+                        // Esplicito: con `.tint(.clear)` la label glass restava bianca →
+                        // illeggibile su vetro chiaro in light mode. Forziamo il colore primario.
+                        .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DS.Spacing.s)
                 }
@@ -203,7 +206,7 @@ private struct KPITile: View {
             if !footnote.isEmpty {
                 Text(footnote)
                     .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

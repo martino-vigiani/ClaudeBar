@@ -13,6 +13,7 @@ struct PanelHeaderView: View {
     let isRefreshing: Bool
     let onRefresh: () -> Void
     let onSettings: () -> Void
+    let onQuit: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var spin = false
@@ -52,6 +53,7 @@ struct PanelHeaderView: View {
 
             refreshButton
             settingsButton
+            quitButton
         }
     }
 
@@ -98,6 +100,17 @@ struct PanelHeaderView: View {
         .accessibilityLabel("Preferences")
     }
 
+    // Quit: stessa forma neutra degli altri due, ma con affordance "uscita" su hover (tinta rossa)
+    // così a riposo non grida e a colpo d'occhio si capisce che è l'azione che chiude l'app.
+    private var quitButton: some View {
+        Button(action: onQuit) {
+            Image(systemName: "power")
+        }
+        .buttonStyle(HeaderIconButtonStyle(role: .quit))
+        .help("Quit ClaudeBar")
+        .accessibilityLabel("Quit ClaudeBar")
+    }
+
     // MARK: Helpers
 
     private func updatedText(_ date: Date) -> LocalizedStringKey {
@@ -113,19 +126,46 @@ struct PanelHeaderView: View {
 // MARK: - Stile bottone icona dell'header
 //
 // Cerchio neutro sottile, leggero feedback alla pressione. NON glass → niente fusione
-// tra bottoni adiacenti. Coerente col vetro neutro.
+// tra bottoni adiacenti. Coerente col vetro neutro. Il ruolo `.quit` aggiunge una tinta
+// rossa SOLO su hover (a riposo resta neutro come gli altri): affordance di uscita discreta.
+
+private enum HeaderIconRole {
+    case neutral
+    case quit
+}
 
 private struct HeaderIconButtonStyle: ButtonStyle {
+    var role: HeaderIconRole = .neutral
+
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(.secondary)
-            .frame(width: 26, height: 26)
-            .background(
-                Circle().fill(Color.primary.opacity(configuration.isPressed ? 0.16 : 0.07))
-            )
-            .contentShape(Circle())
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        IconButtonBody(configuration: configuration, role: role)
+    }
+
+    private struct IconButtonBody: View {
+        let configuration: Configuration
+        let role: HeaderIconRole
+        @State private var hovering = false
+
+        private var isQuitHot: Bool { role == .quit && hovering }
+
+        var body: some View {
+            let tint: Color = isQuitHot ? UsageColorScale.color(used: 95) : .secondary
+            let fillOpacity = configuration.isPressed ? 0.16 : (hovering ? 0.12 : 0.07)
+            return configuration.label
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(isQuitHot ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
+                .frame(width: 26, height: 26)
+                .background(
+                    Circle().fill(
+                        isQuitHot
+                            ? AnyShapeStyle(tint.opacity(configuration.isPressed ? 0.22 : 0.14))
+                            : AnyShapeStyle(Color.primary.opacity(fillOpacity)))
+                )
+                .contentShape(Circle())
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.14), value: hovering)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        }
     }
 }
 
@@ -136,7 +176,7 @@ private struct HeaderIconButtonStyle: ButtonStyle {
             statusColor: UsageColorScale.color(used: 62),
             lastUpdated: Date().addingTimeInterval(-8),
             isRefreshing: false,
-            onRefresh: {}, onSettings: {}
+            onRefresh: {}, onSettings: {}, onQuit: {}
         )
         .padding()
     }
