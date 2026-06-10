@@ -134,6 +134,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let nc = NSWorkspace.shared.notificationCenter
         nc.addObserver(
             self,
+            selector: #selector(self.handleSleep),
+            name: NSWorkspace.willSleepNotification,
+            object: nil)
+        nc.addObserver(
+            self,
             selector: #selector(self.handleWake),
             name: NSWorkspace.didWakeNotification,
             object: nil)
@@ -171,6 +176,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.model?.openPreferences()
     }
     #endif
+
+    @objc private func handleSleep() {
+        // Sospende il loop di refresh durante lo sleep (niente rete/Keychain a Mac dormiente);
+        // `handleWake` lo riprende. Il FileWatcher resta attivo: è passivo e non consuma a sleep.
+        self.scheduler?.suspend()
+    }
 
     @objc private func handleWake() {
         self.scheduler?.resume()

@@ -29,6 +29,116 @@ struct AnalyticsParsingTests {
         #expect(TranscriptLine.decode(Data(line.utf8)) == nil)
     }
 
+    @Test("Split cache con 1h e 5m entrambi valorizzati")
+    func decodeBothEphemeralBuckets() throws {
+        let line = #"{"type":"assistant","timestamp":"2026-05-30T10:00:00Z","cwd":"/p","message":{"model":"claude-opus-4-7","usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":7,"cache_creation_input_tokens":300,"cache_creation":{"ephemeral_1h_input_tokens":200,"ephemeral_5m_input_tokens":100}}}}"#
+        let event = try #require(TranscriptLine.decode(Data(line.utf8)))
+        #expect(event.cacheCreate1h == 200)
+        #expect(event.cacheCreate5m == 100)
+        #expect(event.cacheRead == 7)
+    }
+
+    @Test("Riga user → scartata")
+    func userLineSkipped() {
+        let line = #"{"type":"user","timestamp":"2026-05-30T10:00:00Z","message":{"model":"claude-opus-4-7","usage":{"input_tokens":5,"output_tokens":5}}}"#
+        #expect(TranscriptLine.decode(Data(line.utf8)) == nil)
+    }
+
+    @Test("JSON malformato → scartato senza crash")
+    func malformedLineSkipped() {
+        #expect(TranscriptLine.decode(Data(#"{"type":"assistant","timestamp":"#.utf8)) == nil)
+        #expect(TranscriptLine.decode(Data("not json at all".utf8)) == nil)
+        #expect(TranscriptLine.decode(Data()) == nil)
+    }
+
+    @Test("Assistant senza usage o senza model → scartata")
+    func missingUsageOrModelSkipped() {
+        let noUsage = #"{"type":"assistant","timestamp":"2026-05-30T10:00:00Z","message":{"model":"claude-opus-4-7"}}"#
+        #expect(TranscriptLine.decode(Data(noUsage.utf8)) == nil)
+        let noModel = #"{"type":"assistant","timestamp":"2026-05-30T10:00:00Z","message":{"usage":{"input_tokens":5,"output_tokens":5}}}"#
+        #expect(TranscriptLine.decode(Data(noModel.utf8)) == nil)
+    }
+
+    @Test("Timestamp assente o non parsabile → scartata")
+    func badTimestampSkipped() {
+        let missing = #"{"type":"assistant","message":{"model":"claude-opus-4-7","usage":{"input_tokens":5,"output_tokens":5}}}"#
+        #expect(TranscriptLine.decode(Data(missing.utf8)) == nil)
+        let garbage = #"{"type":"assistant","timestamp":"not-a-date","message":{"model":"claude-opus-4-7","usage":{"input_tokens":5,"output_tokens":5}}}"#
+        #expect(TranscriptLine.decode(Data(garbage.utf8)) == nil)
+    }
+
+    @Test("session_id snake_case usato come fallback di sessionId")
+    func sessionIdSnakeFallback() throws {
+        let line = #"{"type":"assistant","timestamp":"2026-05-30T10:00:00Z","session_id":"snake_1","message":{"model":"claude-opus-4-7","usage":{"input_tokens":5,"output_tokens":5}}}"#
+        let event = try #require(TranscriptLine.decode(Data(line.utf8)))
+        #expect(event.sessionId == "snake_1")
+    }
+
+    @Test("Modello <synthetic> preservato e isSidechain letto")
+    func syntheticAndSidechain() throws {
+        let line = #"{"type":"assistant","timestamp":"2026-05-30T10:00:00Z","isSidechain":true,"message":{"model":"<synthetic>","usage":{"input_tokens":5,"output_tokens":0}}}"#
+        let event = try #require(TranscriptLine.decode(Data(line.utf8)))
+        #expect(event.model == "<synthetic>")
+        #expect(event.rawModel == "<synthetic>")
+        #expect(event.isSidechain == true)
+    }
+
+    @Test("Fast-path ISO8601 equivalente al formatter Foundation")
+    func fastISO8601MatchesFormatter() throws {
+        let samples = [
+            "2026-05-30T10:00:00.000Z",
+            "2026-05-30T10:00:00Z",
+            "2025-12-31T23:59:59.999Z",
+            "2026-01-01T00:00:00.5Z",
+            "2026-03-29T01:30:00+02:00", // offset esplicito, a ridosso del cambio ora EU
+            "2026-10-25T02:30:00-05:00",
+            "2024-02-29T12:00:00Z", // bisestile
+        ]
+        for s in samples {
+            let fast = try #require(TranscriptLine.parseTimestamp(s), "fast parse fallito: \(s)")
+            let slow = try #require(ClaudeUsageEndpoint.parseISO8601(s))
+            #expect(abs(fast.timeIntervalSince(slow)) < 0.001, "mismatch su \(s)")
+        }
+        // Shape non canoniche: stessa risposta del formatter (qui nil).
+        for bad in ["", "not-a-date", "2026-05-30", "2026-13-01T00:00:00Z", "2026-05-30T10:00:00"] {
+            #expect(TranscriptLine.parseTimestamp(bad) == nil
+                || ClaudeUsageEndpoint.parseISO8601(bad) != nil, "divergenza su \(bad)")
+        }
+    }
+
+    @Test("dayKey aritmetico equivalente al DateFormatter in TZ locale")
+    func dayKeyMatchesFormatter() {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.timeZone = TimeZone.current
+        fmt.dateFormat = "yyyy-MM-dd"
+
+        // Campione largo: ogni ~7g per 3 anni + intorni di mezzanotte locale (DST incluso).
+        var dates: [Date] = stride(from: 0.0, to: 3 * 365.25 * 86400, by: 7 * 86400 + 3601)
+            .map { Date(timeIntervalSince1970: 1_700_000_000 + $0) }
+        let calendar = Calendar(identifier: .gregorian)
+        for base in dates.prefix(20) {
+            let midnight = calendar.startOfDay(for: base)
+            dates.append(midnight.addingTimeInterval(-1))
+            dates.append(midnight)
+            dates.append(midnight.addingTimeInterval(1))
+        }
+        for d in dates {
+            #expect(TranscriptLine.dayKey(for: d) == fmt.string(from: d), "mismatch su \(d)")
+        }
+    }
+
+    @Test("Campi opzionali con tipo inatteso non scartano la riga (lenient)")
+    func lenientFieldTypes() throws {
+        // cwd numerico, isSidechain numerico, token come stringa: la riga resta valida.
+        let line = #"{"type":"assistant","timestamp":"2026-05-30T10:00:00Z","cwd":42,"isSidechain":1,"message":{"model":"claude-opus-4-7","usage":{"input_tokens":"12","output_tokens":3}}}"#
+        let event = try #require(TranscriptLine.decode(Data(line.utf8)))
+        #expect(event.projectPath == "")
+        #expect(event.isSidechain == true)
+        #expect(event.input == 12)
+        #expect(event.output == 3)
+    }
+
     @Test("cache_creation assente → tutto su 5m (fallback conservativo)")
     func legacyCacheFallback() throws {
         let line = #"{"type":"assistant","timestamp":"2026-05-30T10:00:00Z","cwd":"/p","message":{"model":"claude-opus-4-7","usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":0,"cache_creation_input_tokens":1000}}}"#

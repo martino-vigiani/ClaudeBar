@@ -155,6 +155,42 @@ struct IncrementalIndexTests {
         #expect(b.totals.input == 100)
     }
 
+    @Test("Shard grandi vengono spezzati in chunk al save; load rifonde tutto senza perdita")
+    func largeShardChunking() async throws {
+        let sb = Sandbox(); defer { sb.cleanup() }
+        let index = IncrementalIndex(dir: sb.indexDir, pricingFingerprint: "test-fp")
+        await index.load()
+
+        // 3 file nello stesso progetto, ciascuno con abbastanza eventi da sforare il cap
+        // complessivo → il save deve produrre PIÙ shard JSON per la stessa shard key.
+        let perFile = IncrementalIndex.maxEventsPerShard / 2 + 1
+        for f in 0..<3 {
+            let events = (0..<perFile).map { i in
+                UsageEvent(
+                    timestamp: Date(timeIntervalSince1970: 1_750_000_000),
+                    dayKey: "2026-06-10", model: "claude-opus-4-8", rawModel: "claude-opus-4-8",
+                    projectPath: "/Users/x/proj-A", sessionId: "sess_1",
+                    messageId: "msg_\(f)_\(i)", requestId: "req_\(f)_\(i)", gitBranch: nil,
+                    isSidechain: false, isSubagent: false,
+                    input: 1, cacheRead: 0, cacheCreate1h: 0, cacheCreate5m: 0, output: 1)
+            }
+            await index.upsert(FileState(
+                path: "/tmp/proj-A/file\(f).jsonl", size: 1, mtimeMs: 1, inode: UInt64(f + 1),
+                parsedBytes: 1, events: events))
+        }
+        await index.save()
+
+        let shardFiles = try FileManager.default.contentsOfDirectory(at: sb.indexDir, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "json" }
+        #expect(shardFiles.count > 1)   // il cap eventi ha spezzato il progetto in più chunk.
+
+        let reloaded = IncrementalIndex(dir: sb.indexDir, pricingFingerprint: "test-fp")
+        await reloaded.load()
+        let states = await reloaded.snapshotAllStates()
+        #expect(states.count == 3)
+        #expect(states.reduce(0) { $0 + $1.events.count } == perFile * 3)
+    }
+
     @Test("Prune: un file sparito esce dal report al refresh successivo")
     func pruneRemovedFile() async throws {
         let sb = Sandbox(); defer { sb.cleanup() }

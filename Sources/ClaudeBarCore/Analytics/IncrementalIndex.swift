@@ -39,6 +39,9 @@ public actor IncrementalIndex {
     private var pricingFingerprint: String
     private var states: [String: FileState] = [:]
     private var loaded = false
+    /// Pool di interning per i campi ad alta duplicazione degli eventi residenti
+    /// (model, projectPath, sessionId, …). Dentro l'isolamento dell'actor: niente lock.
+    private var interner = StringInterner()
 
     public init(dir: URL = AppPaths.indexDir(), pricingFingerprint: String = PricingTable.fingerprint()) {
         self.dir = dir
@@ -62,18 +65,19 @@ public actor IncrementalIndex {
             guard shard.schemaVersion == Self.schemaVersion else { continue }
             if shard.pricingFingerprint != pricingFingerprint { anyPricingMismatch = true }
             for state in shard.states {
-                states[Self.canonicalKey(state.path)] = state
+                states[Self.canonicalKey(state.path)] = interned(state)
             }
         }
         // Se i prezzi sono cambiati, scartiamo gli eventi (verranno riparsati/ricalcolati).
         if anyPricingMismatch {
             states.removeAll()
+            interner.removeAll()
         }
     }
 
     public func fileState(_ path: String) -> FileState? { states[Self.canonicalKey(path)] }
 
-    public func upsert(_ state: FileState) { states[Self.canonicalKey(state.path)] = state }
+    public func upsert(_ state: FileState) { states[Self.canonicalKey(state.path)] = interned(state) }
 
     /// Rimuove dall'indice i file non più presenti sul disco.
     /// `touched` contiene i path enumerati; li canonicalizziamo per confrontarli con le chiavi.
@@ -82,6 +86,24 @@ public actor IncrementalIndex {
         for key in states.keys where !canonicalTouched.contains(key) {
             states.removeValue(forKey: key)
         }
+    }
+
+    /// Riscrive i campi ad alta duplicazione degli eventi attraverso il pool di interning,
+    /// così tutte le occorrenze dello stesso valore condividono un solo buffer heap.
+    /// `messageId`/`requestId` sono quasi-unici per evento: internarli gonfierebbe il pool
+    /// senza condivisione, quindi restano fuori. Solo deduplicazione in memoria: l'encoding
+    /// Codable delle String è identico, lo shard su disco non cambia.
+    private func interned(_ state: FileState) -> FileState {
+        var state = state
+        for i in state.events.indices {
+            state.events[i].dayKey = interner.intern(state.events[i].dayKey)
+            state.events[i].model = interner.intern(state.events[i].model)
+            state.events[i].rawModel = interner.intern(state.events[i].rawModel)
+            state.events[i].projectPath = interner.intern(state.events[i].projectPath)
+            state.events[i].sessionId = interner.intern(state.events[i].sessionId)
+            state.events[i].gitBranch = interner.intern(state.events[i].gitBranch)
+        }
+        return state
     }
 
     /// Canonicalizza un path di file in una chiave stabile, indipendente dalla forma del
@@ -95,13 +117,37 @@ public actor IncrementalIndex {
     /// Tutti gli eventi correnti (per il rollup cross-file con dedup).
     public func snapshotAllStates() -> [FileState] { Array(states.values) }
 
-    /// Salva l'indice su disco, split per-progetto.
+    /// Dimensione massima (eventi) di uno shard su disco. Un progetto molto attivo può
+    /// superare i 100K eventi: encodare/decodare quel singolo JSON (>50MB) costa centinaia
+    /// di MB di picco RSS transient. Spezzare in chunk tiene il picco piatto; `load()` legge
+    /// tutti i `.json` indipendentemente dal nome, quindi il formato shard non cambia.
+    static let maxEventsPerShard = 4000
+
+    /// Salva l'indice su disco, split per-progetto (+ chunk se il progetto è grande).
     public func save() {
         AppPaths.ensureDirectory(dir)
-        // Raggruppa gli stati per "shard key" (segmento progetto dal path).
-        var shards: [String: [FileState]] = [:]
+        // Raggruppa gli stati per "shard key" (segmento progetto dal path), poi spezza
+        // i gruppi grandi in chunk deterministici (ordinati per path) sotto il cap eventi.
+        var grouped: [String: [FileState]] = [:]
         for state in states.values {
-            shards[Self.shardKey(for: state.path), default: []].append(state)
+            grouped[Self.shardKey(for: state.path), default: []].append(state)
+        }
+        var shards: [String: [FileState]] = [:]
+        for (key, group) in grouped {
+            var chunkIndex = 0
+            var chunk: [FileState] = []
+            var chunkEvents = 0
+            for state in group.sorted(by: { $0.path < $1.path }) {
+                if !chunk.isEmpty, chunkEvents + state.events.count > Self.maxEventsPerShard {
+                    shards["\(key)-\(chunkIndex)"] = chunk
+                    chunkIndex += 1
+                    chunk = []
+                    chunkEvents = 0
+                }
+                chunk.append(state)
+                chunkEvents += state.events.count
+            }
+            if !chunk.isEmpty { shards["\(key)-\(chunkIndex)"] = chunk }
         }
         // Riscrivi gli shard correnti.
         let valid = Set(shards.keys.map { "\($0).json" })
@@ -126,6 +172,7 @@ public actor IncrementalIndex {
     /// ricostruisce tutto da zero. `loaded` resta `true`: lo stato corrente (vuoto) è autorevole.
     public func clear() {
         states.removeAll()
+        interner.removeAll()
         guard let files = try? FileManager.default.contentsOfDirectory(
             at: dir, includingPropertiesForKeys: nil)
         else { return }
