@@ -12,6 +12,11 @@ final class PanelHostController {
     private var globalClickMonitor: Any?
     private var localKeyMonitor: Any?
     private let makeRootView: @MainActor () -> AnyView
+    /// Bottone della status bar a cui il pannello è ancorato. Serve al monitor click-fuori:
+    /// su macOS 26 la status bar è hostata out-of-process, quindi il click sull'icona arriva
+    /// ANCHE al global monitor — senza questo filtro il monitor chiude al mouseDown e il
+    /// toggle (mouseUp) riapre subito: il pannello non si chiude mai cliccando l'icona.
+    private weak var anchorButton: NSStatusBarButton?
 
     /// Azione "apri Preferenze" (scorciatoia cmd+, mentre il pannello è key). Iniettata dall'AppDelegate.
     var onPreferences: (@MainActor () -> Void)?
@@ -35,6 +40,7 @@ final class PanelHostController {
     func open(relativeTo statusButton: NSStatusBarButton) {
         let panel = self.panel ?? self.makePanel()
         self.panel = panel
+        self.anchorButton = statusButton
         self.positionPanel(panel, below: statusButton)
         panel.makeKeyAndOrderFront(nil)
         self.installDismissMonitors()
@@ -114,8 +120,19 @@ final class PanelHostController {
 
         self.globalClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown])
-        { [weak self] _ in
-            Task { @MainActor in self?.close() }
+        { [weak self] event in
+            // Per gli eventi global `window` è nil e `locationInWindow` è in coordinate schermo.
+            let screenLocation = event.locationInWindow
+            Task { @MainActor in
+                guard let self else { return }
+                // Click sull'icona della status bar → lo gestisce il toggle al mouseUp,
+                // il monitor NON deve chiudere (altrimenti il toggle riapre subito).
+                if let button = self.anchorButton, let window = button.window {
+                    let buttonRect = window.convertToScreen(button.convert(button.bounds, to: nil))
+                    if buttonRect.contains(screenLocation) { return }
+                }
+                self.close()
+            }
         }
 
         self.localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in

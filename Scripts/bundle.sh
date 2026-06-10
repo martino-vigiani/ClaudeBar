@@ -39,15 +39,19 @@ fi
 echo "==> Building ClaudeBarApp ($CONFIG)…"
 swift build -c "$CONFIG" --product ClaudeBarApp
 
-# Risolve il path del binario (alcune versioni di SwiftPM usano .build/<arch>-apple-macosx/<conf>/).
-BIN=""
-for candidate in \
-  ".build/$(uname -m)-apple-macosx/$CONFIG/ClaudeBarApp" \
-  ".build/$CONFIG/ClaudeBarApp"; do
-  if [[ -f "$candidate" ]]; then BIN="$candidate"; break; fi
-done
-if [[ -z "$BIN" ]]; then
-  echo "ERRORE: binario ClaudeBarApp non trovato dopo la build." >&2
+# Risolve il path del binario chiedendolo a SwiftPM (autorevole per qualunque build system:
+# il layout legacy .build/<arch>-apple-macosx/<conf>/ e quello swiftbuild .build/out/Products/
+# divergono, e un fallback hardcoded rischia di pescare un binario STALE di una build vecchia).
+BIN_DIR=$(swift build -c "$CONFIG" --product ClaudeBarApp --show-bin-path)
+BIN="$BIN_DIR/ClaudeBarApp"
+if [[ ! -f "$BIN" ]]; then
+  echo "ERRORE: binario ClaudeBarApp non trovato in $BIN_DIR dopo la build." >&2
+  exit 1
+fi
+# Guardia anti-stale: il binario deve essere più recente di qualunque sorgente.
+NEWEST_SRC=$(find Sources -name '*.swift' -newer "$BIN" | head -1)
+if [[ -n "$NEWEST_SRC" ]]; then
+  echo "ERRORE: binario più vecchio di $NEWEST_SRC — build stale, non bundlo." >&2
   exit 1
 fi
 
