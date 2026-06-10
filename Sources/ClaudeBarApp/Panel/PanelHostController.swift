@@ -13,9 +13,11 @@ final class PanelHostController {
     private var localKeyMonitor: Any?
     private let makeRootView: @MainActor () -> AnyView
     /// Bottone della status bar a cui il pannello è ancorato. Serve al monitor click-fuori:
-    /// su macOS 26 la status bar è hostata out-of-process, quindi il click sull'icona arriva
-    /// ANCHE al global monitor — senza questo filtro il monitor chiude al mouseDown e il
-    /// toggle (mouseUp) riapre subito: il pannello non si chiude mai cliccando l'icona.
+    /// da macOS 27 beta (Darwin 27) la status bar è hostata out-of-process, quindi il click
+    /// sull'icona arriva ANCHE al global monitor — senza questo filtro il monitor chiude al
+    /// mouseDown e il toggle (mouseUp) riapre subito: il pannello non si chiude mai cliccando
+    /// l'icona. (Altre app menu-bar mostrano lo stesso bug sulla beta: comportamento OS-level.)
+    /// Il filtro è innocuo sulle versioni dove il click NON raggiunge il monitor: non scatta.
     private weak var anchorButton: NSStatusBarButton?
 
     /// Azione "apri Preferenze" (scorciatoia cmd+, mentre il pannello è key). Iniettata dall'AppDelegate.
