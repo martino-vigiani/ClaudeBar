@@ -1,6 +1,6 @@
 import Foundation
 
-// Pricing table embedded (Claude 4.x) + normalizzazione model id + override JSON locale.
+// Pricing table embedded (Claude 4.x + Fable 5) + normalizzazione model id + override JSON locale.
 // Prezzi **per token** (USD), verificati dalla tabella reale di CodexBar
 // (`.reference/CodexBar/.../CostUsagePricing.swift`).
 //
@@ -81,6 +81,10 @@ public enum PricingTable {
     /// Tabella embedded, chiave = model id **normalizzato** (vedi `ModelNormalizer`).
     /// Prezzi verificati dall'upstream CodexBar; cache 5m/1h/read derivate dai moltiplicatori.
     public static let embedded: [String: ModelPricing] = [
+        // Fable 5 — flagship tier proprio (listino più alto di Opus). Prezzi verificati
+        // da platform.claude.com/docs pricing (GA 2026-06-09): input $10/Mtok, output $50/Mtok.
+        // 1M context window a prezzo standard (nessun tier long-context). Cache standard ×1.25/×2/×0.1.
+        "claude-fable-5": .anthropic(input: 1e-5, output: 5e-5),
         // Opus 4.5/4.6/4.7/4.8 — stesso listino (input 5e-6, output 2.5e-5).
         "claude-opus-4-8": .anthropic(input: 5e-6, output: 2.5e-5),
         "claude-opus-4-7": .anthropic(input: 5e-6, output: 2.5e-5),

@@ -7,6 +7,9 @@ import Testing
 @Suite("ModelNormalizer")
 struct ModelNormalizerTests {
     @Test("Normalizza i casi reali", arguments: [
+        ("claude-fable-5", "claude-fable-5"),
+        ("claude-fable-5[1m]", "claude-fable-5"),
+        ("fable", "claude-fable-5"),
         ("claude-opus-4-7", "claude-opus-4-7"),
         ("claude-opus-4-7[1m]", "claude-opus-4-7"),
         ("claude-opus-4-8[1m]", "claude-opus-4-8"),
@@ -27,6 +30,7 @@ struct ModelNormalizerTests {
         #expect(ModelNormalizer.isSynthetic("<synthetic>"))
         #expect(ModelNormalizer.normalize("<synthetic>") == "<synthetic>")
         #expect(ModelNormalizer.isAlias("opus"))
+        #expect(ModelNormalizer.isAlias("fable"))
         #expect(!ModelNormalizer.isAlias("claude-opus-4-7"))
     }
 }

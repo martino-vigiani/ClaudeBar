@@ -10,6 +10,7 @@ public enum ModelNormalizer {
     /// esatto è ignoto): l'aggregato che li include va marcato `costEstimated`.
     /// Aggiornare quando esce una nuova famiglia di default.
     public static let aliasMap: [String: String] = [
+        "fable": "claude-fable-5",
         "opus": "claude-opus-4-8",
         "sonnet": "claude-sonnet-4-6",
         "haiku": "claude-haiku-4-5",

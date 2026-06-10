@@ -33,7 +33,7 @@ struct PricingNormalizationIntegrationTests {
 
     @Test("Il suffisso [1m] NON deve mai produrre costo nil per un modello noto")
     func suffix1mNeverNil() throws {
-        for raw in ["claude-opus-4-8[1m]", "claude-sonnet-4-6[1m]", "claude-haiku-4-5[1m]"] {
+        for raw in ["claude-fable-5[1m]", "claude-opus-4-8[1m]", "claude-sonnet-4-6[1m]", "claude-haiku-4-5[1m]"] {
             let event = try #require(TranscriptLine.decode(line(model: raw, input: 500, output: 50)))
             let report = CostCalculator.build(events: [event])
             #expect(report.totals.costUSD != nil, "costo nil per \(raw) → normalizzazione [1m] rotta")
@@ -46,6 +46,14 @@ struct PricingNormalizationIntegrationTests {
         let report = CostCalculator.build(events: [event])
         #expect(report.totals.costUSD != nil)   // l'alias risolve a un modello concreto.
         #expect(report.costEstimated == true)   // ma è marcato stima (alias → modello esatto incerto).
+    }
+
+    @Test("Alias 'fable' è prezzato come STIMA e marca costEstimated")
+    func fableAliasIsEstimated() throws {
+        let event = try #require(TranscriptLine.decode(line(model: "fable", input: 1000, output: 0)))
+        let report = CostCalculator.build(events: [event])
+        #expect(report.totals.costUSD != nil)   // 'fable' → claude-fable-5: costo concreto.
+        #expect(report.costEstimated == true)   // alias non versionato → marcato stima.
     }
 
     @Test("Costo aggregato su più modelli normalizzati = somma dei costi per-modello")

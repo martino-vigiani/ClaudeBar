@@ -27,7 +27,7 @@
 | OAuth client ID | `9d1c250a-e61b-44d9-88ed-5944d1962f5e` (pubblico, identico a Claude Code CLI) |
 | **Keychain** | `kSecClassGenericPassword`, service `Claude Code-credentials`. Sul sistema dell'utente: account `martinovigiani`. JSON sotto chiave `claudeAiOauth` |
 | **Transcript** | `~/.claude/projects/<encoded-cwd>/*.jsonl` — **20 progetti, 4135 file, 1.8 GB**. Re-scan completo = inaccettabile → incrementale obbligatorio |
-| Modelli usati dall'utente | `claude-opus-4-7`, `claude-opus-4-8`, `claude-opus-4-6`, `claude-sonnet-4-6`, varianti `[1m]`, alias `opus`/`sonnet`/`haiku`, `<synthetic>` |
+| Modelli usati dall'utente | `claude-fable-5`, `claude-opus-4-7`, `claude-opus-4-8`, `claude-opus-4-6`, `claude-sonnet-4-6`, varianti `[1m]`, alias `fable`/`opus`/`sonnet`/`haiku`, `<synthetic>` |
 | service_tier | sempre `standard` (54k campioni) — nessun priority/batch nei log |
 
 ⚠️ **Buchi trovati nella pricing table di CodexBar** che dobbiamo colmare:
@@ -433,6 +433,7 @@ Prezzi **per token** (USD), verificati dalla tabella CodexBar (`per token`, non 
 
 | Modello (normalizzato) | input | output | cache-write (5m) | cache-write (1h) | cache-read |
 |---|---|---|---|---|---|
+| `claude-fable-5` ⚠️*flagship, no long-context tier* | 1e-5 | 5e-5 | 1.25e-5 | **2e-5** | 1e-6 |
 | `claude-opus-4-8` | 5e-6 | 2.5e-5 | 6.25e-6 | **1e-5** | 5e-7 |
 | `claude-opus-4-7` ⚠️*nuovo* | 5e-6 | 2.5e-5 | 6.25e-6 | **1e-5** | 5e-7 |
 | `claude-opus-4-6` | 5e-6 | 2.5e-5 | 6.25e-6 | **1e-5** | 5e-7 |

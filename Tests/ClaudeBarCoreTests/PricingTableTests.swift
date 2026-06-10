@@ -5,6 +5,17 @@ import Testing
 
 @Suite("PricingTable")
 struct PricingTableTests {
+    @Test("Fable 5 ha i prezzi attesi e i moltiplicatori cache corretti")
+    func fable5Pricing() throws {
+        let p = try #require(PricingTable.pricing(for: "claude-fable-5", overrides: [:]))
+        #expect(p.input == 1e-5)
+        #expect(p.output == 5e-5)
+        #expect(abs(p.cacheWrite5m - 1e-5 * 1.25) < 1e-18)
+        #expect(abs(p.cacheWrite1h - 1e-5 * 2.0) < 1e-18)
+        #expect(abs(p.cacheRead - 1e-5 * 0.1) < 1e-18)
+        #expect(p.thresholdTokens == nil)
+    }
+
     @Test("Opus 4.7 ha i prezzi attesi e i moltiplicatori cache corretti")
     func opus47Pricing() throws {
         let p = try #require(PricingTable.pricing(for: "claude-opus-4-7", overrides: [:]))
