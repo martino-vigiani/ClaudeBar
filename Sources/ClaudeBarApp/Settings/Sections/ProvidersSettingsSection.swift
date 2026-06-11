@@ -60,7 +60,7 @@ struct ProvidersSettingsSection: View {
                     secretStore: self.secretStore,
                     isExpanded: self.expandedProvider == descriptor.id,
                     onToggleExpand: {
-                        withAnimation(.snappy) {
+                        withAnimation(DS.Motion.soft) {
                             self.expandedProvider = self.expandedProvider == descriptor.id ? nil : descriptor.id
                         }
                     })

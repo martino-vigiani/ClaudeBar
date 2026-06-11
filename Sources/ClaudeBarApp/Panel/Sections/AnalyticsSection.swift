@@ -49,7 +49,6 @@ struct AnalyticsSection: View {
     private var header: some View {
         HStack {
             EyebrowTag(text: String(localized: "ANALYTICS"), symbol: "chart.line.uptrend.xyaxis")
-                .font(.dsTitle)
             Spacer()
             // Selettore neutro (niente segmented blu di sistema): pillola con segmento attivo
             // in scala di grigi, coerente col vetro neutro e con lo ProviderSwitcher.
@@ -67,7 +66,8 @@ struct AnalyticsSection: View {
                                     Capsule(style: .continuous).fill(Color.primary.opacity(0.12))
                                 }
                             }
-                            .contentShape(Capsule())
+                            // Hover (solo i segmenti non attivi): fa capire che la pillola è cliccabile.
+                            .dsHoverHighlight(in: Capsule(style: .continuous), hover: active ? 0 : 0.08)
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
@@ -125,16 +125,21 @@ struct AnalyticsSection: View {
                     Text(showCost ? "$" : "tok")
                         .font(.dsCaption.weight(.semibold))
                         .frame(width: 30)
+                        .padding(.vertical, 3)
+                        .background(Capsule(style: .continuous).fill(Color.primary.opacity(0.06)))
+                        .dsHoverHighlight(in: Capsule(style: .continuous))
+                        .contentTransition(.identity)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+                .help(showCost ? "Show tokens" : "Show cost")
             }
             SpendChart(series: analytics.series, showCost: showCost)
                 .frame(height: 96)
             if analytics.showCostDisclaimer {
                 Text("API-equivalent estimate: Max plans are flat-rate, this is not real spend.")
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(DS.Spacing.m)
@@ -166,6 +171,9 @@ struct AnalyticsSection: View {
                     Label(expanded ? "Show less" : "Show more",
                           systemImage: expanded ? "chevron.up" : "chevron.down")
                         .font(.dsHeadline)
+                        // Esplicito: con `.tint(.clear)` la label glass restava bianca →
+                        // illeggibile su vetro chiaro in light mode. Forziamo il colore primario.
+                        .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DS.Spacing.s)
                 }
@@ -203,7 +211,7 @@ private struct KPITile: View {
             if !footnote.isEmpty {
                 Text(footnote)
                     .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -222,7 +230,9 @@ private struct DeltaBadge: View {
             Text("\(abs(Int(pct.rounded())))%")
                 .font(.system(size: 10, weight: .semibold))
         }
-        .foregroundStyle(up ? UsageColorScale.color(used: 90) : UsageColorScale.color(used: 20))
+        // Delta costo: l'aumento usa un ambra-rosso TENUE (76), non il rosso-critico (90) della
+        // scala limiti — salire di spesa va notato, non è "quota esaurita". Calo → verde.
+        .foregroundStyle(up ? UsageColorScale.color(used: 76) : UsageColorScale.color(used: 20))
         .accessibilityLabel(up ? Text("up by \(Int(pct))%") : Text("down by \(abs(Int(pct)))%"))
     }
 }
@@ -312,6 +322,7 @@ private struct BreakdownDisclosure: View {
     let items: [BreakdownItem]
     let showCost: Bool
     @State private var open = false
+    @State private var hovering = false
 
     private var maxValue: Double {
         max(1, items.map { showCost ? $0.cost : Double($0.tokens) }.max() ?? 1)
@@ -326,61 +337,66 @@ private struct BreakdownDisclosure: View {
                 if !items.isEmpty {
                     Text("\(items.count)")
                         .font(.dsCaption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(open || hovering ? Color.primary : Color.secondary)
                     .rotationEffect(.degrees(open ? 90 : 0))
             }
 
             if open {
-                if items.isEmpty {
-                    Text("No data in this period")
-                        .font(.dsCaption)
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, DS.Spacing.s)
-                } else {
-                    VStack(spacing: DS.Spacing.s) {
-                        ForEach(items) { item in
-                            let value = showCost ? item.cost : Double(item.tokens)
-                            HStack(spacing: DS.Spacing.s) {
-                                Image(systemName: item.symbol)
-                                    .font(.system(size: 11)).foregroundStyle(.secondary).frame(width: 14)
-                                Text(item.label)
-                                    .font(.dsBody)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                    .frame(width: 120, alignment: .leading)
-                                GeometryReader { geo in
-                                    ZStack(alignment: .leading) {
-                                        Capsule().fill(Color.primary.opacity(0.08))
-                                        Capsule()
-                                            .fill(Color.primary.opacity(0.45))
-                                            .frame(width: max(4, geo.size.width * (value / maxValue)))
+                Group {
+                    if items.isEmpty {
+                        Text("No data in this period")
+                            .font(.dsCaption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, DS.Spacing.s)
+                    } else {
+                        VStack(spacing: DS.Spacing.s) {
+                            ForEach(items) { item in
+                                let value = showCost ? item.cost : Double(item.tokens)
+                                HStack(spacing: DS.Spacing.s) {
+                                    Image(systemName: item.symbol)
+                                        .font(.system(size: 11)).foregroundStyle(.secondary).frame(width: 14)
+                                    Text(item.label)
+                                        .font(.dsBody)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                        .frame(width: 120, alignment: .leading)
+                                    GeometryReader { geo in
+                                        ZStack(alignment: .leading) {
+                                            Capsule().fill(Color.primary.opacity(0.08))
+                                            Capsule()
+                                                .fill(Color.primary.opacity(0.45))
+                                                .frame(width: max(4, geo.size.width * (value / maxValue)))
+                                        }
                                     }
+                                    .frame(height: 6)
+                                    Text(showCost ? item.cost.currencyString : item.tokens.compactString)
+                                        .font(.dsMono).foregroundStyle(.secondary)
+                                        .frame(width: 52, alignment: .trailing)
                                 }
-                                .frame(height: 6)
-                                Text(showCost ? item.cost.currencyString : item.tokens.compactString)
-                                    .font(.dsMono).foregroundStyle(.secondary)
-                                    .frame(width: 52, alignment: .trailing)
                             }
                         }
+                        .padding(.top, DS.Spacing.s)
                     }
-                    .padding(.top, DS.Spacing.s)
                 }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(DS.Spacing.m)
         .contentShape(Rectangle()) // tutta la pill (anche i bordi) è area di tap
         .dsCardBezel()
+        .onHover { hovering = $0 }
         .onTapGesture { withAnimation(DS.Motion.soft) { open.toggle() } }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(open ? Text("\(title), expanded") : Text("\(title), collapsed"))
         .animation(DS.Motion.soft, value: open)
+        .animation(.easeOut(duration: 0.14), value: hovering)
     }
 }
 

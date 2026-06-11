@@ -217,7 +217,7 @@ struct SecretFieldAuthRow: View {
 
             Text(self.footnote)
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let errorMessage {

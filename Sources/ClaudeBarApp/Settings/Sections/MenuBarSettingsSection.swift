@@ -163,7 +163,7 @@ private struct GlancePreviewStrip: View {
                     Text(Self.stateLabel(state))
                         .font(.dsEyebrow)
                         .tracking(0.4)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
             }

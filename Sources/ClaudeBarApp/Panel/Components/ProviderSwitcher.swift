@@ -67,7 +67,8 @@ struct ProviderSwitcher: View {
                         .fill(Color.primary.opacity(0.10))
                 }
             }
-            .contentShape(Capsule())
+            // Hover sui chip inattivi: affordance "cliccabile" (il puntatore è il primo input su macOS).
+            .dsHoverHighlight(in: Capsule(style: .continuous), hover: isActive ? 0 : 0.08)
         }
         .buttonStyle(.plain)
         // Tooltip sui chip collassati (e utile anche su quello attivo) per non perdere il nome.

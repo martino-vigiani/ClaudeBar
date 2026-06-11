@@ -144,6 +144,10 @@ final class AppModelPanelAdapter: PanelViewModeling {
         self.model.openPreferences()
     }
 
+    func quit() {
+        self.model.quit()
+    }
+
     func reconnect() {
         // Riconnessione resiliente: prompt Keychain SUBITO + poll bounded del refresh pigro della
         // CLI (vedi AppModel.reconnect). Non un semplice refresh: dopo aver messo la password il

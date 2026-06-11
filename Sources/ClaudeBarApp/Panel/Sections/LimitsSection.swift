@@ -10,6 +10,8 @@ import SwiftUI
 struct LimitsSection: View {
     let windows: [UsageWindowVM]
     @Binding var showUsed: Bool
+    /// Collassata: mostra solo i 2 anelli (niente reset/pace/cap) → fascia compatta.
+    var collapsed: Bool = false
 
     private var primary: [UsageWindowVM] {
         windows.filter { $0.kind == .session || $0.kind == .weekly }
@@ -19,17 +21,17 @@ struct LimitsSection: View {
     }
 
     var body: some View {
-        VStack(spacing: DS.Spacing.l) {
+        VStack(spacing: collapsed ? DS.Spacing.s : DS.Spacing.l) {
             // Due anelli grandi affiancati.
             HStack(alignment: .top, spacing: DS.Spacing.l) {
                 ForEach(primary) { window in
-                    WindowColumn(window: window, showUsed: $showUsed)
+                    WindowColumn(window: window, showUsed: $showUsed, collapsed: collapsed)
                         .frame(maxWidth: .infinity)
                 }
             }
 
-            // Cap per-modello (se presenti).
-            if !caps.isEmpty {
+            // Cap per-modello (se presenti) — nascosti quando collassato.
+            if !collapsed, !caps.isEmpty {
                 VStack(spacing: DS.Spacing.s) {
                     ForEach(caps) { cap in
                         CapRow(window: cap)
@@ -47,6 +49,7 @@ struct LimitsSection: View {
 private struct WindowColumn: View {
     let window: UsageWindowVM
     @Binding var showUsed: Bool
+    var collapsed: Bool = false
 
     var body: some View {
         VStack(spacing: DS.Spacing.s) {
@@ -54,11 +57,14 @@ private struct WindowColumn: View {
 
             UsageRing(window: window, showUsed: $showUsed)
 
-            ResetCountdown(resetsAt: window.resetsAt, kind: window.kind)
+            // Reset + Pace solo in modalità estesa: nello stato collassato resta il solo anello.
+            if !collapsed {
+                ResetCountdown(resetsAt: window.resetsAt, kind: window.kind)
 
-            if window.pace != nil {
-                PaceBar(window: window)
-                    .padding(.top, DS.Spacing.xxs)
+                if window.pace != nil {
+                    PaceBar(window: window)
+                        .padding(.top, DS.Spacing.xxs)
+                }
             }
         }
     }

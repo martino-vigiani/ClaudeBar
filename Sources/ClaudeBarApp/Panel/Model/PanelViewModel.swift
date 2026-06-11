@@ -293,11 +293,16 @@ protocol PanelViewModeling: AnyObject {
     func openSettings()
     func reconnect()
     func setRange(_ range: AnalyticsRange)
+    /// Esce dall'app (NSApp.terminate). Default no-op nei mock/preview.
+    func quit()
 }
 
 extension PanelViewModeling {
     /// Default no-op: i mock/adapter che non hanno bisogno del refresh on-demand non devono implementarla.
     func panelDidOpen() {}
+
+    /// Default no-op: i mock/preview non escono dall'app. L'adapter reale inoltra a `AppModel.quit()`.
+    func quit() {}
 
     // Default multi-provider: per i mock/adapter legacy il pannello resta mono-provider (Claude
     // abbonamento), layout limiti invariato. Nessuna regressione.

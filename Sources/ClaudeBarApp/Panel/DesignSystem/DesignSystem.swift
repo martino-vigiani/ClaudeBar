@@ -38,6 +38,10 @@ enum DS {
         static let ringLineWidth: CGFloat = 9  // spessore arco anello grande
         static let panelWidth: CGFloat = 360
         static let panelMaxHeight: CGFloat = 560
+        /// Altezza max quando la fascia limiti è collassata ai soli anelli: il pannello
+        /// cresce un po' così lo ScrollView analytics guadagna spazio reale, non solo quello
+        /// liberato dalla fascia (vedi `CollapseHandle` / PanelContentView).
+        static let panelMaxHeightExpanded: CGFloat = 600
         static let paceBarHeight: CGFloat = 12
         static let hairline: CGFloat = 1
     }
@@ -124,6 +128,37 @@ extension Color {
     // (DECISIONS.md §3): nessuna tinta sul glass.
 }
 
+// MARK: - Hover highlight (affordance puntatore, macOS)
+
+extension View {
+    /// Evidenziazione al passaggio del puntatore: un fill neutro che si intensifica su hover,
+    /// dietro al contenuto. Dà affordance "cliccabile" coerente a tutte le superfici tap del
+    /// pannello (disclosure, picker, switcher, maniglia) senza ripetere lo stesso `onHover`.
+    /// Trasparente a riposo (default) → si può applicare anche sopra elementi con sfondo proprio.
+    func dsHoverHighlight<S: Shape>(
+        in shape: S,
+        rest: Double = 0,
+        hover: Double = 0.08
+    ) -> some View {
+        modifier(HoverHighlight(shape: shape, rest: rest, hover: hover))
+    }
+}
+
+private struct HoverHighlight<S: Shape>: ViewModifier {
+    let shape: S
+    let rest: Double
+    let hover: Double
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(shape.fill(Color.primary.opacity(hovering ? hover : rest)))
+            .contentShape(shape)
+            .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.14), value: hovering)
+    }
+}
+
 // MARK: - Hairline + inset highlight (double-bezel §2.4)
 
 extension View {
@@ -139,12 +174,14 @@ private struct CardBezel: ViewModifier {
     @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
-        let hairline = scheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
-        let inset = scheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.5)
+        let hairline = scheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
+        // Light mode: highlight bianco più tenue (0.5 lavava il testo vicino al bordo alto)
+        // e fill più opaco → maggior contrasto del testo su card sul vetro chiaro.
+        let inset = scheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.32)
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(Color.dsCardBackground.opacity(scheme == .dark ? 0.5 : 0.7))
+                    .fill(Color.dsCardBackground.opacity(scheme == .dark ? 0.5 : 0.86))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
