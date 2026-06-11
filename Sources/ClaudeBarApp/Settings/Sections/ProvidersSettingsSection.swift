@@ -15,6 +15,7 @@ struct ProvidersSettingsSection: View {
     @Bindable var settings: SettingsStore
     let secretStore: any ProviderSecretStoring
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var expandedProvider: ProviderID?
 
     var body: some View {
@@ -60,7 +61,7 @@ struct ProvidersSettingsSection: View {
                     secretStore: self.secretStore,
                     isExpanded: self.expandedProvider == descriptor.id,
                     onToggleExpand: {
-                        withAnimation(DS.Motion.soft) {
+                        withAnimation(self.reduceMotion ? nil : DS.Motion.soft) {
                             self.expandedProvider = self.expandedProvider == descriptor.id ? nil : descriptor.id
                         }
                     })

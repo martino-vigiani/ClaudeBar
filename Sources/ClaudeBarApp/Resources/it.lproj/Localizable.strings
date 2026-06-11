@@ -59,6 +59,11 @@
 "No data in this period" = "Nessun dato nel periodo";
 "%@, expanded" = "%@, espanso";
 "%@, collapsed" = "%@, compresso";
+"Show limits detail" = "Mostra il dettaglio dei limiti";
+"Collapse to rings — more analytics" = "Comprimi agli anelli — più analytics";
+"Collapse limits to rings" = "Comprimi i limiti agli anelli";
+"Show tokens" = "Mostra i token";
+"Show cost" = "Mostra il costo";
 "DETAILS" = "DETTAGLI";
 "Cache efficiency" = "Efficienza cache";
 "Chart points" = "Punti nel grafico";

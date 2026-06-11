@@ -286,8 +286,12 @@ enum IconRenderer {
         if spec.style == .dualBar, let weekly = spec.weeklyUsed {
             let innerRadius = radius - lineWidth - 1.2
             if innerRadius > 1 {
-                let weeklyColor = (spec.monochrome ? NSColor.labelColor : self.contrastAdjusted(self.color(forUsed: weekly), light: isLight))
-                    .withAlphaComponent(0.30 * dimFactor)
+                // Colore base del settimanale: identico per track e fill (cambia solo l'alpha) →
+                // calcolato una volta sola invece di ripetere contrastAdjusted(color(forUsed:)).
+                let weeklyBase: NSColor = spec.monochrome
+                    ? .labelColor
+                    : self.contrastAdjusted(self.color(forUsed: weekly), light: isLight)
+                let weeklyColor = weeklyBase.withAlphaComponent(0.30 * dimFactor)
                 ctx.setLineWidth(1.6)
                 ctx.setStrokeColor(weeklyColor.cgColor)
                 ctx.addArc(center: center, radius: innerRadius, startAngle: 0, endAngle: .pi * 2, clockwise: false)
@@ -295,8 +299,7 @@ enum IconRenderer {
 
                 let w = max(0, min(weekly, 1))
                 if w > 0.0001 {
-                    let weeklyFill = (spec.monochrome ? NSColor.labelColor : self.contrastAdjusted(self.color(forUsed: weekly), light: isLight))
-                        .withAlphaComponent(dimFactor)
+                    let weeklyFill = weeklyBase.withAlphaComponent(dimFactor)
                     ctx.setStrokeColor(weeklyFill.cgColor)
                     ctx.addArc(
                         center: center,

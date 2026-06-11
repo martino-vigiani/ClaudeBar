@@ -172,6 +172,7 @@ private struct PanelActionButtonStyle: ButtonStyle {
         let configuration: Configuration
         let role: Role
         @Environment(\.colorScheme) private var scheme
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @State private var hovering = false
 
         var body: some View {
@@ -196,8 +197,12 @@ private struct PanelActionButtonStyle: ButtonStyle {
                 .contentShape(Capsule(style: .continuous))
                 .opacity(pressed ? 0.85 : 1)
                 .onHover { hovering = $0 }
-                .animation(.easeOut(duration: 0.12), value: pressed)
-                .animation(.easeOut(duration: 0.14), value: hovering)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: pressed)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovering)
+                // Reset @State stantio dopo l'orderOut del pannello (vedi HoverHighlight).
+                .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
+                    hovering = false
+                }
         }
 
         /// Colore label: il prominent ha un fill graphite "pieno", quindi serve il colore di

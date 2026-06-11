@@ -149,13 +149,20 @@ private struct HoverHighlight<S: Shape>: ViewModifier {
     let rest: Double
     let hover: Double
     @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
             .background(shape.fill(Color.primary.opacity(hovering ? hover : rest)))
             .contentShape(shape)
             .onHover { hovering = $0 }
-            .animation(.easeOut(duration: 0.14), value: hovering)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovering)
+            // Il pannello è un NSPanel che fa orderOut senza propagare un onHover di uscita:
+            // lo @State hovering resterebbe true e alla riapertura mostrerebbe l'highlight
+            // "incollato". Azzeralo quando il pannello sparisce.
+            .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
+                hovering = false
+            }
     }
 }
 

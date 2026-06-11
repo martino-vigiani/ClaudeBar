@@ -19,6 +19,7 @@ struct AnalyticsSection: View {
     @State private var expanded = false       // "Mostra di più"
     @State private var selectedRange: AnalyticsRange
     @Namespace private var glassNS
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(analytics: AnalyticsVM, onRange: @escaping (AnalyticsRange) -> Void) {
         self.analytics = analytics
@@ -163,10 +164,10 @@ struct AnalyticsSection: View {
                 if expanded {
                     ExtraStatsView(analytics: analytics)
                         .glassEffectID("extra", in: glassNS)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
                 }
                 Button {
-                    withAnimation(DS.Motion.soft) { expanded.toggle() }
+                    withAnimation(reduceMotion ? nil : DS.Motion.soft) { expanded.toggle() }
                 } label: {
                     Label(expanded ? "Show less" : "Show more",
                           systemImage: expanded ? "chevron.up" : "chevron.down")
@@ -323,6 +324,7 @@ private struct BreakdownDisclosure: View {
     let showCost: Bool
     @State private var open = false
     @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var maxValue: Double {
         max(1, items.map { showCost ? $0.cost : Double($0.tokens) }.max() ?? 1)
@@ -340,10 +342,15 @@ private struct BreakdownDisclosure: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
+                // Hover scoped al solo chevron: tingere il chevron non deve far rivalutare
+                // l'intera card (con i suoi GeometryReader) — quindi @State hover e animazione
+                // vivono qui, non sul wrapper.
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(open || hovering ? Color.primary : Color.secondary)
                     .rotationEffect(.degrees(open ? 90 : 0))
+                    .onHover { hovering = $0 }
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovering)
             }
 
             if open {
@@ -384,19 +391,26 @@ private struct BreakdownDisclosure: View {
                         .padding(.top, DS.Spacing.s)
                     }
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                // `.move(edge: .top)` farebbe scivolare le righe SOPRA l'header durante la
+                // transizione: clippiamo il contenuto espandibile ai propri bounds così
+                // l'entrata/uscita resta dentro il blocco e non sovrasta il titolo.
+                .clipped()
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(DS.Spacing.m)
         .contentShape(Rectangle()) // tutta la pill (anche i bordi) è area di tap
         .dsCardBezel()
-        .onHover { hovering = $0 }
-        .onTapGesture { withAnimation(DS.Motion.soft) { open.toggle() } }
+        .onTapGesture { withAnimation(reduceMotion ? nil : DS.Motion.soft) { open.toggle() } }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(open ? Text("\(title), expanded") : Text("\(title), collapsed"))
-        .animation(DS.Motion.soft, value: open)
-        .animation(.easeOut(duration: 0.14), value: hovering)
+        .animation(reduceMotion ? nil : DS.Motion.soft, value: open)
+        // Reset hover quando il pannello si nasconde: senza mouse-exit (panel chiuso da
+        // fuori) lo stato hover resterebbe acceso al riapri. Notification dal panel-host.
+        .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
+            hovering = false
+        }
     }
 }
 

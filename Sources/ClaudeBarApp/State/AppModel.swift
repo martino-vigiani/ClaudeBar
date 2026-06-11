@@ -456,12 +456,19 @@ final class AppModel {
         self.statusController?.updateGlance(spec)
     }
 
+    /// Aspetto del MENU BAR per il contrasto dell'icona. Derivato dall'`effectiveAppearance` del
+    /// button della status bar (via `StatusItemController`), NON da `NSApp.effectiveAppearance`:
+    /// `applyAppearance()` forza `NSApp.appearance` con la scelta in-app (Chiaro/Scuro), che NON
+    /// rappresenta lo sfondo reale sotto la status bar — usarla scuriva/schiariva l'icona a vuoto.
+    /// Senza statusController collegato (boot/test headless) si ripiega su `.dark` (default storico).
     private var appearance: GlanceAppearance {
-        // `NSApp` può essere nil prima dell'avvio dell'app (o in ambiente headless/test): in quel
-        // caso ripieghiamo su `.light` invece di crashare. A runtime `NSApp` è sempre presente.
-        guard let app = NSApp else { return .light }
-        let name = app.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua])
-        return name == .darkAqua ? .dark : .light
+        self.statusController?.menuBarAppearance ?? .dark
+    }
+
+    /// Chiamato dallo `StatusItemController` quando l'aspetto reale del menu bar cambia (KVO su
+    /// `effectiveAppearance`): ricalcola il glance così il contrasto dell'icona segue lo sfondo.
+    func menuBarAppearanceDidChange() {
+        self.recomputeGlance()
     }
 
     // MARK: - Stato

@@ -34,12 +34,8 @@ struct PanelContentView<Model: PanelViewModeling>: View {
 
     private var statusColor: Color {
         // Glance della finestra critica → curva parametrica con le soglie utente (coerente icona).
+        // Quando ci sono finestre, l'adapter garantisce `criticalWindow` non-nil.
         if let w = model.criticalWindow { return w.glanceColor }
-        // Nessuna finestra critica ma ci sono finestre (edge): rifletti lo stato della più usata
-        // invece di restare grigio neutro → pallino coerente con gli anelli sotto.
-        if let maxUsed = model.windows.map(\.utilization).max() {
-            return UsageColorScale.color(used: maxUsed)
-        }
         // Davvero nessun dato (loading / no-auth): neutro.
         return .secondary
     }
@@ -121,6 +117,14 @@ struct PanelContentView<Model: PanelViewModeling>: View {
                 appeared = true
             }
         }
+        // Collapse/expand della fascia limiti → cambia il maxHeight del pannello: notifica il
+        // PanelHostController perché ri-dimensioni e ri-ancori la finestra (cresce verso il basso).
+        // Ritardo di un giro di run loop così SwiftUI ha già aggiornato la propria fitting size.
+        .onChange(of: collapsed) {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .claudeBarPanelContentDidResize, object: nil)
+            }
+        }
     }
 
     // MARK: Fascia provider — switch sullo stato, poi sul TIPO di dati (limiti vs usage+costo)
@@ -195,9 +199,15 @@ private struct CollapseHandle: View {
     @Binding var collapsed: Bool
     @State private var hovering = false
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Button {
-            withAnimation(DS.Motion.soft) { collapsed.toggle() }
+            if reduceMotion {
+                collapsed.toggle()
+            } else {
+                withAnimation(DS.Motion.soft) { collapsed.toggle() }
+            }
         } label: {
             HStack(spacing: DS.Spacing.s) {
                 hairline
@@ -211,10 +221,16 @@ private struct CollapseHandle: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.14), value: hovering)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovering)
         .help(collapsed ? "Show limits detail" : "Collapse to rings — more analytics")
         .accessibilityLabel(collapsed ? Text("Show limits detail") : Text("Collapse limits to rings"))
         .accessibilityAddTraits(.isButton)
+        // Il pannello viene riusato tra un'apertura e l'altra: se si chiude col mouse fermo sopra
+        // la maniglia, AppKit non emette un onHover(false). Resettiamo l'hover alla chiusura così
+        // alla riapertura la maniglia non resta "accesa" senza il cursore sopra.
+        .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
+            hovering = false
+        }
     }
 
     // Hairline che si accende lievemente su hover → segnala che la riga è una maniglia.

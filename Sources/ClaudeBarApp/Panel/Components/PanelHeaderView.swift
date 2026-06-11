@@ -145,6 +145,7 @@ private struct HeaderIconButtonStyle: ButtonStyle {
         let configuration: Configuration
         let role: HeaderIconRole
         @State private var hovering = false
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
         private var isQuitHot: Bool { role == .quit && hovering }
 
@@ -163,8 +164,12 @@ private struct HeaderIconButtonStyle: ButtonStyle {
                 )
                 .contentShape(Circle())
                 .onHover { hovering = $0 }
-                .animation(.easeOut(duration: 0.14), value: hovering)
-                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovering)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
+                // Reset @State stantio dopo l'orderOut del pannello (vedi HoverHighlight).
+                .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
+                    hovering = false
+                }
         }
     }
 }

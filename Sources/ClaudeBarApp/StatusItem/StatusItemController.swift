@@ -14,6 +14,12 @@ final class StatusItemController {
     private var animationDriver: DisplayLinkDriver?
     private var animationPhase: CGFloat = 0
 
+    /// Osservazione KVO dell'`effectiveAppearance` del button: l'aspetto del MENU BAR può cambiare
+    /// (light↔dark) indipendentemente dalla scelta in-app — segue lo sfondo sotto la status bar, non
+    /// `NSApp.appearance`. Quando cambia, ridisegniamo con il contrasto corretto e avvisiamo l'AppModel
+    /// così la `spec.appearance` ricalcolata combaci con ciò che si vede davvero.
+    private var appearanceObservation: NSKeyValueObservation?
+
     /// `onRefresh`/`onPreferences`/`onQuit`: azioni del menu rapido (iniettate dall'AppDelegate).
     private let onRefresh: @MainActor () -> Void
     private let onPreferences: @MainActor () -> Void
@@ -32,6 +38,16 @@ final class StatusItemController {
         self.onQuit = onQuit
     }
 
+    /// Aspetto REALE del menu bar (light/dark), derivato dall'`effectiveAppearance` del button —
+    /// non da `NSApp.effectiveAppearance`, che la scelta in-app (Chiaro/Scuro) può falsare. È questo
+    /// il valore con cui va calcolato il contrasto dell'icona. Prima dell'`install()` (button nil)
+    /// ripiega su `.dark`, l'aspetto storico di default della status bar.
+    var menuBarAppearance: GlanceAppearance {
+        guard let button = self.statusItem.button else { return .dark }
+        let name = button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua])
+        return name == .darkAqua ? .dark : .light
+    }
+
     /// Configura button, target/action e disegna l'icona iniziale.
     func install() {
         guard let button = self.statusItem.button else { return }
@@ -39,6 +55,16 @@ final class StatusItemController {
         button.action = #selector(self.handleClick(_:))
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         button.toolTip = AppInfo.displayName
+
+        // Osserva i cambi di aspetto del menu bar: ridisegna col nuovo contrasto e chiede all'AppModel
+        // di ricalcolare la spec (così `appearance` resta allineata). `[weak self]` evita il retain.
+        self.appearanceObservation = button.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
+            // Il callback KVO può arrivare fuori dal MainActor: rientriamo prima di toccare la UI.
+            MainActor.assumeIsolated {
+                self?.model?.menuBarAppearanceDidChange()
+            }
+        }
+
         self.applyCurrentSpec()
     }
 
@@ -58,6 +84,8 @@ final class StatusItemController {
 
     func prepareForShutdown() {
         self.stopAnimation()
+        self.appearanceObservation?.invalidate()
+        self.appearanceObservation = nil
         self.panelHost.prepareForShutdown()
         NSStatusBar.system.removeStatusItem(self.statusItem)
     }

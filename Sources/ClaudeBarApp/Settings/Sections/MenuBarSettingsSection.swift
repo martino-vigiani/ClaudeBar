@@ -148,6 +148,17 @@ private struct ThresholdSlider: View {
 private struct GlancePreviewStrip: View {
     @Bindable var settings: SettingsStore
 
+    /// Aspetto della finestra Impostazioni (segue la scelta in-app Chiaro/Scuro applicata a `NSApp`).
+    /// È l'appearance con cui disegniamo l'icona di anteprima e con cui tingiamo lo sfondo della
+    /// pillola: così l'anteprima riflette il contrasto reale che l'icona avrebbe su quello sfondo,
+    /// invece di mostrarla sempre come "su menu bar scura" (che divergeva dall'icona reale scurita
+    /// del 15% su menu bar chiara).
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var previewAppearance: GlanceAppearance {
+        self.colorScheme == .dark ? .dark : .light
+    }
+
     /// Campioni di USATO rappresentativi (verde / ambra / rosso) per mostrare l'intera scala.
     private let samples: [Double] = [0.32, 0.72, 0.96]
 
@@ -156,7 +167,9 @@ private struct GlancePreviewStrip: View {
             ForEach(self.samples, id: \.self) { used in
                 let state = self.state(forUsed: used)
                 VStack(spacing: DS.Spacing.xs) {
-                    GlanceIconView(image: self.icon(forUsed: used, state: state))
+                    GlanceIconView(
+                        image: self.icon(forUsed: used, state: state),
+                        appearance: self.previewAppearance)
                     Text("\(Int((used * 100).rounded()))% used")
                         .font(.dsCaption)
                         .foregroundStyle(.secondary)
@@ -192,7 +205,7 @@ private struct GlancePreviewStrip: View {
             style: self.settings.glanceStyle,
             percentLabel: self.settings.percentLabel,
             monochrome: self.settings.monochromeIcon,
-            appearance: .dark)
+            appearance: self.previewAppearance)
         // L'anteprima è statica (niente pulsazione animata): phase 0 → frame stabile.
         return IconRenderer.render(spec, phase: 0)
     }
@@ -209,26 +222,30 @@ private struct GlancePreviewStrip: View {
     }
 }
 
-/// Mostra una `NSImage` dell'icona su una pillola scura che simula la menu bar, per leggere bene
-/// il colore reale (non-template) indipendentemente dall'aspetto della finestra Impostazioni.
-/// In modalità monocromatica l'immagine è un template B/N: SwiftUI la ricolora col `foregroundStyle`,
-/// quindi forziamo il bianco per riprodurre l'aspetto in una menu bar scura (altrimenti sparirebbe).
+/// Mostra una `NSImage` dell'icona su una pillola che simula la menu bar, per leggere bene il colore
+/// reale (non-template). La pillola segue l'`appearance` con cui è stata disegnata l'icona (scura su
+/// menu bar scura, chiara su menu bar chiara): così il contrasto dell'anteprima coincide con quello
+/// dell'icona reale. In modalità monocromatica l'immagine è un template B/N che SwiftUI ricolora col
+/// `foregroundStyle`: forziamo bianco su pillola scura / nero su pillola chiara (altrimenti sparirebbe).
 private struct GlanceIconView: View {
     let image: NSImage
+    let appearance: GlanceAppearance
+
+    private var isLight: Bool { self.appearance == .light }
 
     var body: some View {
         Image(nsImage: self.image)
             .interpolation(.high)
-            .foregroundStyle(.white)
+            .foregroundStyle(self.isLight ? Color.black : Color.white)
             .frame(height: 18)
             .padding(.horizontal, DS.Spacing.s)
             .padding(.vertical, DS.Spacing.xs)
             .background(
                 RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
-                    .fill(Color.black.opacity(0.85)))
+                    .fill((self.isLight ? Color.white : Color.black).opacity(0.85)))
             .overlay(
                 RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.08), lineWidth: DS.Size.hairline))
+                    .strokeBorder((self.isLight ? Color.black : Color.white).opacity(0.08), lineWidth: DS.Size.hairline))
     }
 }
 

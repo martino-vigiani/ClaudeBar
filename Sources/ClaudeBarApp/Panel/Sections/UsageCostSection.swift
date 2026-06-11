@@ -70,6 +70,7 @@ struct UsageCostSection: View {
                         .padding(.vertical, 3)
                         .background(Capsule(style: .continuous).fill(Color.primary.opacity(0.06)))
                         .dsHoverHighlight(in: Capsule(style: .continuous))
+                        .contentTransition(.identity)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
@@ -206,6 +207,7 @@ private struct CostBreakdownDisclosure: View {
     let showCost: Bool
     @State private var open = false
     @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var maxValue: Double {
         max(1, self.items.map { self.showCost ? $0.cost : Double($0.tokens) }.max() ?? 1)
@@ -222,10 +224,14 @@ private struct CostBreakdownDisclosure: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
+                // Hover scoped al solo chevron: evita di rivalutare l'intera card (GeometryReader)
+                // solo per tingere il chevron.
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(self.open || self.hovering ? Color.primary : Color.secondary)
                     .rotationEffect(.degrees(self.open ? 90 : 0))
+                    .onHover { self.hovering = $0 }
+                    .animation(self.reduceMotion ? nil : .easeOut(duration: 0.14), value: self.hovering)
             }
 
             if self.open {
@@ -266,19 +272,23 @@ private struct CostBreakdownDisclosure: View {
                         .padding(.top, DS.Spacing.s)
                     }
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                // Clip ai bounds: senza, `.move(edge: .top)` fa scivolare le righe sopra l'header.
+                .clipped()
+                .transition(self.reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(DS.Spacing.m)
         .contentShape(Rectangle())
         .dsCardBezel()
-        .onHover { self.hovering = $0 }
-        .onTapGesture { withAnimation(DS.Motion.soft) { self.open.toggle() } }
+        .onTapGesture { withAnimation(self.reduceMotion ? nil : DS.Motion.soft) { self.open.toggle() } }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(self.open ? Text("\(self.title), expanded") : Text("\(self.title), collapsed"))
-        .animation(DS.Motion.soft, value: self.open)
-        .animation(.easeOut(duration: 0.14), value: self.hovering)
+        .animation(self.reduceMotion ? nil : DS.Motion.soft, value: self.open)
+        // Reset hover alla chiusura del pannello (no mouse-exit): notification dal panel-host.
+        .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
+            self.hovering = false
+        }
     }
 }
 

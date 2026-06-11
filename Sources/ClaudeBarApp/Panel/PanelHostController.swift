@@ -1,6 +1,18 @@
 import AppKit
 import SwiftUI
 
+extension Notification.Name {
+    /// Postata quando il pannello viene nascosto (orderOut su click-fuori / Esc / shutdown).
+    /// La SwiftUI view la osserva per resettare stato effimero (es. hover della CollapseHandle),
+    /// che AppKit non azzera da sé visto che il pannello viene riusato tra un'apertura e l'altra.
+    static let claudeBarPanelDidHide = Notification.Name("claudeBarPanelDidHide")
+
+    /// Postata dal contenuto SwiftUI quando la sua fitting size cambia a pannello aperto
+    /// (es. collapse/expand della fascia limiti). Il controller ri-dimensiona e ri-ancora il
+    /// pannello mantenendo il top edge sotto il bottone status (cresce verso il basso).
+    static let claudeBarPanelContentDidResize = Notification.Name("claudeBarPanelContentDidResize")
+}
+
 /// NSPanel borderless non-activating che ospita la SwiftUI view del pannello (Liquid Glass)
 /// ancorata sotto l'icona della status bar (02-app-architecture.md §4).
 ///
@@ -11,6 +23,8 @@ final class PanelHostController {
     private var panel: PanelWindow?
     private var globalClickMonitor: Any?
     private var localKeyMonitor: Any?
+    /// Observer della notification di resize del contenuto SwiftUI (collapse/expand fascia limiti).
+    private var contentResizeObserver: NSObjectProtocol?
     private let makeRootView: @MainActor () -> AnyView
     /// Bottone della status bar a cui il pannello è ancorato. Serve al monitor click-fuori:
     /// da macOS 27 beta (Darwin 27) la status bar è hostata out-of-process, quindi il click
@@ -46,16 +60,21 @@ final class PanelHostController {
         self.positionPanel(panel, below: statusButton)
         panel.makeKeyAndOrderFront(nil)
         self.installDismissMonitors()
+        self.installContentResizeObserver()
     }
 
     func close() {
         self.removeDismissMonitors()
+        self.removeContentResizeObserver()
         self.panel?.orderOut(nil)
+        NotificationCenter.default.post(name: .claudeBarPanelDidHide, object: nil)
     }
 
     func prepareForShutdown() {
         self.removeDismissMonitors()
+        self.removeContentResizeObserver()
         self.panel?.orderOut(nil)
+        NotificationCenter.default.post(name: .claudeBarPanelDidHide, object: nil)
         self.panel = nil
     }
 
@@ -113,6 +132,39 @@ final class PanelHostController {
             }
         }
         panel.setFrameOrigin(origin)
+    }
+
+    // MARK: - Resize live (collapse/expand fascia limiti a pannello aperto)
+    //
+    // La SwiftUI view cambia il suo maxHeight quando l'utente collassa/espande la fascia limiti:
+    // il fitting size del contenuto cresce/si accorcia. Senza ri-dimensionare la finestra il
+    // contenuto verrebbe clippato (o, ri-ancorando solo l'origin di default, crescerebbe verso
+    // l'alto). Qui ri-dimensioniamo e ri-ancoriamo tenendo fermo il TOP edge (subito sotto il
+    // bottone status) così il pannello cresce verso il basso, come un menu.
+
+    private func installContentResizeObserver() {
+        self.removeContentResizeObserver()
+        self.contentResizeObserver = NotificationCenter.default.addObserver(
+            forName: .claudeBarPanelContentDidResize, object: nil, queue: .main)
+        { [weak self] _ in
+            MainActor.assumeIsolated { self?.repositionToFitContent() }
+        }
+    }
+
+    private func removeContentResizeObserver() {
+        if let observer = self.contentResizeObserver {
+            NotificationCenter.default.removeObserver(observer)
+            self.contentResizeObserver = nil
+        }
+    }
+
+    /// Ri-dimensiona il pannello alla nuova fitting size del contenuto mantenendo fermo il top
+    /// edge: ricalcola l'origin sotto il bottone status (cresce verso il basso). No-op se il
+    /// pannello non è visibile o il bottone d'ancoraggio non è più disponibile.
+    private func repositionToFitContent() {
+        guard let panel = self.panel, panel.isVisible,
+              let button = self.anchorButton else { return }
+        self.positionPanel(panel, below: button)
     }
 
     // MARK: - Dismissal (click-fuori + Esc)
