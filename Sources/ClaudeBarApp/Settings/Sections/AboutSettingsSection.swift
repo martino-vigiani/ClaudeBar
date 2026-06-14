@@ -33,7 +33,7 @@ struct AboutSettingsSection: View {
                         .textSelection(.enabled)
                     Text(AppInfo.bundleIdentifier)
                         .font(.dsMono)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
                 Spacer(minLength: 0)
@@ -104,7 +104,7 @@ struct AboutSettingsSection: View {
             Spacer(minLength: DS.Spacing.m)
             Image(systemName: "arrow.up.right")
                 .font(.dsCaption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)

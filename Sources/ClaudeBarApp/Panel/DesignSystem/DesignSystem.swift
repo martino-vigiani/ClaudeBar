@@ -42,6 +42,14 @@ enum DS {
         /// cresce un po' così lo ScrollView analytics guadagna spazio reale, non solo quello
         /// liberato dalla fascia (vedi `CollapseHandle` / PanelContentView).
         static let panelMaxHeightExpanded: CGFloat = 600
+        /// Cap dello ScrollView analytics quando la fascia limiti è ESPANSA (anelli + reset
+        /// + Pace visibili): il resto dell'altezza pannello è occupato dalla fascia, quindi le
+        /// analytics restano basse. Derivato da `panelMaxHeight` meno l'ingombro della fascia.
+        static let analyticsCap: CGFloat = 340
+        /// Cap dello ScrollView analytics quando la fascia limiti è COLLASSATA ai soli anelli:
+        /// pannello più alto (`panelMaxHeightExpanded`) e fascia più corta → le analytics
+        /// guadagnano ~150pt rispetto allo stato espanso.
+        static let analyticsCapCollapsed: CGFloat = 480
         static let paceBarHeight: CGFloat = 12
         static let hairline: CGFloat = 1
     }
@@ -59,6 +67,9 @@ enum DS {
         static let color = Animation.easeInOut(duration: 0.6)
         /// Pulsazione critico/empty.
         static let pulse = Animation.easeInOut(duration: 1.4).repeatForever(autoreverses: true)
+        /// Transizione hover puntatore (affordance cliccabile): superfici tap del pannello
+        /// (disclosure, picker, switcher, maniglia, quit button) si tingono con questo timing.
+        static let hover = Animation.easeOut(duration: 0.14)
     }
 }
 
@@ -156,7 +167,7 @@ private struct HoverHighlight<S: Shape>: ViewModifier {
             .background(shape.fill(Color.primary.opacity(hovering ? hover : rest)))
             .contentShape(shape)
             .onHover { hovering = $0 }
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovering)
+            .animation(reduceMotion ? nil : DS.Motion.hover, value: hovering)
             // Il pannello è un NSPanel che fa orderOut senza propagare un onHover di uscita:
             // lo @State hovering resterebbe true e alla riapertura mostrerebbe l'highlight
             // "incollato". Azzeralo quando il pannello sparisce.

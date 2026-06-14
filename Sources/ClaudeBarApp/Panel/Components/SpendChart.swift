@@ -64,13 +64,13 @@ struct SpendChart: View {
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 4)) {
                 AxisGridLine().foregroundStyle(Color.primary.opacity(0.05))
-                AxisValueLabel().font(.system(size: 9)).foregroundStyle(.tertiary)
+                AxisValueLabel().font(.system(size: 9)).foregroundStyle(Color.primary.opacity(0.5))
             }
         }
         .chartYAxis {
             AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) {
                 AxisGridLine().foregroundStyle(Color.primary.opacity(0.05))
-                AxisValueLabel().font(.system(size: 9)).foregroundStyle(.tertiary)
+                AxisValueLabel().font(.system(size: 9)).foregroundStyle(Color.primary.opacity(0.5))
             }
         }
         .chartOverlay { proxy in

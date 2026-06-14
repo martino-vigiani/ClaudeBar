@@ -198,7 +198,7 @@ private struct PanelActionButtonStyle: ButtonStyle {
                 .opacity(pressed ? 0.85 : 1)
                 .onHover { hovering = $0 }
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: pressed)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovering)
+                .animation(reduceMotion ? nil : DS.Motion.hover, value: hovering)
                 // Reset @State stantio dopo l'orderOut del pannello (vedi HoverHighlight).
                 .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
                     hovering = false

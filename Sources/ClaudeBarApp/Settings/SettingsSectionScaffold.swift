@@ -127,7 +127,7 @@ struct SettingsSectionPlaceholder: View {
                     .foregroundStyle(.secondary)
                 Text("The controls for “\(self.section.title)” are wired up in this section.")
                     .font(.dsCaption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
         }
     }

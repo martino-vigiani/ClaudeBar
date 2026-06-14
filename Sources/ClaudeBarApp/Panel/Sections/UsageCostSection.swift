@@ -48,9 +48,9 @@ struct UsageCostSection: View {
                 chartCard
             }
 
-            // Per modello (riusa una disclosure leggera).
+            // Per modello (riusa la disclosure condivisa con AnalyticsSection).
             if !self.cost.byModel.isEmpty {
-                CostBreakdownDisclosure(title: String(localized: "By model"), items: self.cost.byModel, showCost: self.showCost)
+                BreakdownDisclosure(title: String(localized: "By model"), items: self.cost.byModel, showCost: self.showCost)
             }
         }
     }
@@ -199,98 +199,8 @@ private struct SpendLimitCard: View {
     }
 }
 
-// MARK: - Breakdown per modello (disclosure leggera, vetro neutro)
-
-private struct CostBreakdownDisclosure: View {
-    let title: String
-    let items: [BreakdownItem]
-    let showCost: Bool
-    @State private var open = false
-    @State private var hovering = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var maxValue: Double {
-        max(1, self.items.map { self.showCost ? $0.cost : Double($0.tokens) }.max() ?? 1)
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: DS.Spacing.s) {
-                Text(self.title).font(.dsHeadline)
-                Spacer()
-                if !self.items.isEmpty {
-                    Text("\(self.items.count)")
-                        .font(.dsCaption)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                // Hover scoped al solo chevron: evita di rivalutare l'intera card (GeometryReader)
-                // solo per tingere il chevron.
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(self.open || self.hovering ? Color.primary : Color.secondary)
-                    .rotationEffect(.degrees(self.open ? 90 : 0))
-                    .onHover { self.hovering = $0 }
-                    .animation(self.reduceMotion ? nil : .easeOut(duration: 0.14), value: self.hovering)
-            }
-
-            if self.open {
-                Group {
-                    if self.items.isEmpty {
-                        Text("No data in this period")
-                            .font(.dsCaption)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, DS.Spacing.s)
-                    } else {
-                        VStack(spacing: DS.Spacing.s) {
-                            ForEach(self.items) { item in
-                                let value = self.showCost ? item.cost : Double(item.tokens)
-                                HStack(spacing: DS.Spacing.s) {
-                                    Image(systemName: item.symbol)
-                                        .font(.system(size: 11)).foregroundStyle(.secondary).frame(width: 14)
-                                    Text(item.label)
-                                        .font(.dsBody)
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                        .frame(width: 120, alignment: .leading)
-                                    GeometryReader { geo in
-                                        ZStack(alignment: .leading) {
-                                            Capsule().fill(Color.primary.opacity(0.08))
-                                            Capsule()
-                                                .fill(Color.primary.opacity(0.45))
-                                                .frame(width: max(4, geo.size.width * (value / self.maxValue)))
-                                        }
-                                    }
-                                    .frame(height: 6)
-                                    Text(self.showCost ? item.cost.currencyString : item.tokens.compactString)
-                                        .font(.dsMono).foregroundStyle(.secondary)
-                                        .frame(width: 52, alignment: .trailing)
-                                }
-                            }
-                        }
-                        .padding(.top, DS.Spacing.s)
-                    }
-                }
-                // Clip ai bounds: senza, `.move(edge: .top)` fa scivolare le righe sopra l'header.
-                .clipped()
-                .transition(self.reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .padding(DS.Spacing.m)
-        .contentShape(Rectangle())
-        .dsCardBezel()
-        .onTapGesture { withAnimation(self.reduceMotion ? nil : DS.Motion.soft) { self.open.toggle() } }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(self.open ? Text("\(self.title), expanded") : Text("\(self.title), collapsed"))
-        .animation(self.reduceMotion ? nil : DS.Motion.soft, value: self.open)
-        // Reset hover alla chiusura del pannello (no mouse-exit): notification dal panel-host.
-        .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
-            self.hovering = false
-        }
-    }
-}
+// `BreakdownDisclosure` (By model) è condivisa con AnalyticsSection:
+// vedi Panel/Components/BreakdownDisclosure.swift.
 
 #Preview("UsageCostSection") {
     let buckets = [

@@ -92,7 +92,7 @@ struct PanelContentView<Model: PanelViewModeling>: View {
                 // quando il contenuto è poco (es. loading/errore) invece di lasciare spazio vuoto.
                 // Collassando la fascia limiti il cap (e il pannello) crescono → la fascia
                 // analytics guadagna ~150pt invece di restare schiacciata.
-                .frame(maxHeight: collapsed ? 480 : 340)
+                .frame(maxHeight: collapsed ? DS.Size.analyticsCapCollapsed : DS.Size.analyticsCap)
             }
             .padding(DS.Spacing.xl)
         }
@@ -221,7 +221,7 @@ private struct CollapseHandle: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovering)
+        .animation(reduceMotion ? nil : DS.Motion.hover, value: hovering)
         .help(collapsed ? "Show limits detail" : "Collapse to rings — more analytics")
         .accessibilityLabel(collapsed ? Text("Show limits detail") : Text("Collapse limits to rings"))
         .accessibilityAddTraits(.isButton)

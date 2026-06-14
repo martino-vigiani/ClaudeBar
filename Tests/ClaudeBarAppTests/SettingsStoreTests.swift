@@ -125,6 +125,22 @@ struct SettingsStoreTests {
         #expect(reloaded.sessionThresholds == [50, 75, 90])
     }
 
+    @Test("resetToDefaults coalizza onChange: una sola notifica, non ~22")
+    func resetCoalescesOnChange() {
+        let settings = SettingsStore(defaults: self.isolatedDefaults())
+        // Pre-tocco alcune proprietà SENZA observer attivo, così le mutazioni di setup non
+        // contano: il reset deve riportarle ai default emettendo comunque UNA sola notifica.
+        settings.appearance = .dark
+        settings.monochromeIcon = true
+        settings.includeSubagentsInAnalytics = false
+
+        var count = 0
+        settings.onChange = { count += 1 }
+        settings.resetToDefaults()
+        // ~22 didSet riassegnati, ma il batch-coalesce emette una sola notifica finale.
+        #expect(count == 1)
+    }
+
     @Test("schemaVersion scritto al primo avvio")
     func schemaVersionWritten() {
         let defaults = self.isolatedDefaults()

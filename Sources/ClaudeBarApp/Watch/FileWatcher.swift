@@ -110,8 +110,13 @@ final class FileWatcher {
 
     private func startPolling() {
         self.pollTask?.cancel()
-        self.lastSeenSignature = self.directorySignature()
+        let root = self.root
         self.pollTask = Task { @MainActor in
+            // Firma iniziale: lo stat-walk gira off-main (vedi `directorySignature`), il valore
+            // torna sul MainActor per l'assegnazione.
+            self.lastSeenSignature = await Task.detached(priority: .utility) {
+                Self.directorySignature(root: root)
+            }.value
             while !Task.isCancelled {
                 do {
                     try await Task.sleep(for: .seconds(45))
@@ -119,7 +124,11 @@ final class FileWatcher {
                     return
                 }
                 if Task.isCancelled { return }
-                let signature = self.directorySignature()
+                // Lo `stat()` ricorsivo è I/O bloccante: calcolalo fuori dal MainActor, poi
+                // confronta/assegna sul main (lastSeenSignature resta MainActor-isolato).
+                let signature = await Task.detached(priority: .utility) {
+                    Self.directorySignature(root: root)
+                }.value
                 if signature != self.lastSeenSignature {
                     self.lastSeenSignature = signature
                     self.logger.debug("polling ha rilevato un cambiamento sfuggito al vnode")
@@ -130,14 +139,16 @@ final class FileWatcher {
     }
 
     /// Firma leggera: conteggio file + mtime più recente nella radice e sottocartelle (solo stat).
-    private func directorySignature() -> String {
+    /// `nonisolated static`: non tocca stato MainActor (legge solo `root`, passato come parametro
+    /// Sendable) così l'enumerazione + lo `stat()` ricorsivo girano off-main senza bloccare la UI.
+    nonisolated static func directorySignature(root: URL) -> String {
         let fm = FileManager.default
         var count = 0
         var newest: TimeInterval = 0
         let keys: [URLResourceKey] = [.contentModificationDateKey, .isDirectoryKey]
 
         guard let enumerator = fm.enumerator(
-            at: self.root,
+            at: root,
             includingPropertiesForKeys: keys,
             options: [.skipsHiddenFiles])
         else {

@@ -49,6 +49,13 @@ final class SettingsStore {
     @ObservationIgnored
     var onChange: (@MainActor () -> Void)?
 
+    /// Soppressore di `onChange` durante un batch (es. `resetToDefaults`): i 22 `didSet`
+    /// riassegnati emetterebbero 22 notifiche, ciascuna ri-applicando appearance/glance/
+    /// launch-at-login. Col flag attivo i persist* non notificano; il batch emette UNA sola
+    /// notifica finale. I call-site UI normali (una proprietà alla volta) non sono toccati.
+    @ObservationIgnored
+    private var isBatchUpdating = false
+
     /// Versione dello schema delle preferenze "scalari" (clbar.*). Bump SOLO se una migrazione
     /// non additiva lo richiede; oggi i campi sono additivi con default, quindi non serve resettare.
     static let schemaVersion = 1
@@ -290,9 +297,16 @@ final class SettingsStore {
     // MARK: - Reset
 
     /// Riporta TUTTE le preferenze (clbar.*) ai default, segreti Keychain esclusi (restano).
-    /// Usata dalla sezione Avanzato. Riassegna ogni proprietà così i `didSet` persistono e
-    /// l'`onChange` propaga ai sottosistemi (scheduler/icona/launch-at-login) in un colpo solo.
+    /// Usata dalla sezione Avanzato. Riassegna ogni proprietà così i `didSet` persistono; durante
+    /// il batch `onChange` è soppresso e si emette UNA sola notifica finale (vedi `isBatchUpdating`)
+    /// invece di ~22, evitando di ri-applicare appearance/glance/launch-at-login a ogni proprietà.
     func resetToDefaults() {
+        self.isBatchUpdating = true
+        defer {
+            // Sblocca PRIMA di notificare, così la notifica finale propaga davvero ai sottosistemi.
+            self.isBatchUpdating = false
+            self.onChange?()
+        }
         self.usageSource = .auto
         self.refreshInterval = .fiveMinutes
         self.appearance = .system
@@ -322,14 +336,21 @@ final class SettingsStore {
 
     private static func key(_ name: String) -> String { AppInfo.defaultsPrefix + name }
 
+    /// Notifica i sottosistemi, ma resta zitta durante un batch (vedi `isBatchUpdating`):
+    /// il batch emetterà una sola notifica finale.
+    private func notifyChange() {
+        guard !self.isBatchUpdating else { return }
+        self.onChange?()
+    }
+
     private func persistBool(_ value: Bool, _ name: String) {
         self.defaults.set(value, forKey: Self.key(name))
-        self.onChange?()
+        self.notifyChange()
     }
 
     private func persistDouble(_ value: Double, _ name: String) {
         self.defaults.set(value, forKey: Self.key(name))
-        self.onChange?()
+        self.notifyChange()
     }
 
     private func persistString(_ value: String?, _ name: String) {
@@ -338,19 +359,19 @@ final class SettingsStore {
         } else {
             self.defaults.removeObject(forKey: Self.key(name))
         }
-        self.onChange?()
+        self.notifyChange()
     }
 
     private func persistEnum(_ value: some RawRepresentable<String>, _ name: String) {
         self.defaults.set(value.rawValue, forKey: Self.key(name))
-        self.onChange?()
+        self.notifyChange()
     }
 
     /// Persiste le soglie sessione come CSV ordinato/deduplicato di interi 1...99.
     private func persistThresholds(_ values: [Int]) {
         let clean = Self.normalizeThresholds(values)
         self.defaults.set(clean.map(String.init).joined(separator: ","), forKey: Self.key("sessionThresholds"))
-        self.onChange?()
+        self.notifyChange()
     }
 
     /// Legge le soglie sessione dal CSV. `nil` se assente/vuoto → default 50/75/90.
@@ -380,7 +401,7 @@ final class SettingsStore {
         if let data = try? JSONEncoder().encode(value) {
             self.defaults.set(data, forKey: Self.key("multiProvider"))
         }
-        self.onChange?()
+        self.notifyChange()
     }
 
     /// Carica `MultiProviderSettings` da JSON. `nil` se assente o non decodificabile (→ `.initial`).
