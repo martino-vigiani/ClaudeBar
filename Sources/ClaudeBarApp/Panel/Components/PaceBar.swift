@@ -45,7 +45,7 @@ struct PaceBar: View {
             ZStack(alignment: .leading) {
                 // Fondo.
                 Capsule()
-                    .fill(Color.primary.opacity(0.10))
+                    .fill(Color.primary.opacity(DS.Opacity.trackBackground))
                     .frame(height: h)
 
                 // Riempimento = usato.

@@ -20,6 +20,7 @@ struct AnalyticsSection: View {
     @State private var selectedRange: AnalyticsRange
     @Namespace private var glassNS
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
 
     init(analytics: AnalyticsVM, onRange: @escaping (AnalyticsRange) -> Void) {
         self.analytics = analytics
@@ -42,6 +43,11 @@ struct AnalyticsSection: View {
         }
         .onChange(of: selectedRange) { _, newValue in
             if analytics.range != newValue { onRange(newValue) }
+        }
+        // Apertura "pulita": il pannello (NSPanel riusato) non azzera da sé lo @State tra le
+        // aperture. "Mostra di più" è un disclosure che deve ripartire chiuso a ogni apertura.
+        .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
+            expanded = false
         }
     }
 
@@ -140,7 +146,7 @@ struct AnalyticsSection: View {
             if analytics.showCostDisclaimer {
                 Text("API-equivalent estimate: Max plans are flat-rate, this is not real spend.")
                     .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.dsSecondaryOnGlass(scheme))
             }
         }
         .padding(DS.Spacing.m)
@@ -172,15 +178,23 @@ struct AnalyticsSection: View {
                     Label(expanded ? "Show less" : "Show more",
                           systemImage: expanded ? "chevron.up" : "chevron.down")
                         .font(.dsHeadline)
-                        // Esplicito: con `.tint(.clear)` la label glass restava bianca →
-                        // illeggibile su vetro chiaro in light mode. Forziamo il colore primario.
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DS.Spacing.s)
+                        // NIENTE `.buttonStyle(.glass)` qui: glass-on-glass lavava la label in
+                        // light mode (la vibrancy del glass ignora `.primary`). Capsula con fill
+                        // semantico + hairline → contrasto garantito in chiaro E scuro.
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.primary.opacity(DS.Opacity.badgeFill))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .strokeBorder(Color.primary.opacity(0.10), lineWidth: DS.Size.hairline)
+                        )
+                        .contentShape(Capsule(style: .continuous))
                 }
-                .buttonStyle(.glass)
-                .tint(.clear)
-                .glassEffectID("more-toggle", in: glassNS)
+                .buttonStyle(PressScaleButtonStyle(reduceMotion: reduceMotion))
             }
         }
     }
@@ -194,12 +208,13 @@ private struct KPITile: View {
     let delta: Double?
     let footnote: String
     let symbol: String
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
                 Image(systemName: symbol).font(.system(size: 11)).foregroundStyle(.secondary)
-                Text(title).font(.dsCaption).foregroundStyle(.secondary)
+                Text(title).font(.dsCaption).foregroundStyle(Color.dsSecondaryOnGlass(scheme))
             }
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(value)
@@ -212,7 +227,7 @@ private struct KPITile: View {
             if !footnote.isEmpty {
                 Text(footnote)
                     .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.dsSecondaryOnGlass(scheme))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -249,6 +264,7 @@ private struct TokenBreakdownCard: View {
     let cacheRead: Int
     let cacheWrite: Int
     let output: Int
+    @Environment(\.colorScheme) private var scheme
 
     private struct Seg: Identifiable {
         let label: String
@@ -272,7 +288,7 @@ private struct TokenBreakdownCard: View {
                 Spacer()
                 Text(total.compactString)
                     .font(.dsMono)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.dsSecondaryOnGlass(scheme))
             }
 
             // Barra impilata (4 tonalità del colore primario).
@@ -301,7 +317,7 @@ private struct TokenBreakdownCard: View {
                             .frame(width: 9, height: 9)
                         Text(seg.label)
                             .font(.dsCaption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.dsSecondaryOnGlass(scheme))
                             .lineLimit(1)
                         Spacer(minLength: 2)
                         Text(seg.value.compactString)
@@ -323,6 +339,7 @@ private struct TokenBreakdownCard: View {
 
 private struct ExtraStatsView: View {
     let analytics: AnalyticsVM
+    @Environment(\.colorScheme) private var scheme
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.s) {
             EyebrowTag(text: String(localized: "DETAILS"))
@@ -335,7 +352,7 @@ private struct ExtraStatsView: View {
             HStack {
                 Text("Chart points").font(.dsBody)
                 Spacer()
-                Text("\(analytics.series.count)").font(.dsMono).foregroundStyle(.secondary)
+                Text("\(analytics.series.count)").font(.dsMono).foregroundStyle(Color.dsSecondaryOnGlass(scheme))
             }
         }
         .padding(DS.Spacing.m)
@@ -359,6 +376,20 @@ extension Int {
         case 1_000...: return String(format: "%.0fK", d / 1_000)
         default: return "\(self)"
         }
+    }
+}
+
+// MARK: - Press feedback
+
+/// Stile bottone con scale-on-press: ogni pressable deve "rispondere" al tocco (scale 0.97).
+/// Usato dove `.buttonStyle(.plain)` non darebbe nessun feedback tattile.
+private struct PressScaleButtonStyle: ButtonStyle {
+    let reduceMotion: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 

@@ -497,12 +497,50 @@ final class AppModel {
     }
 
     private func handleLimitsError(_ error: Error) {
-        // Su errore, il dato del provider attivo non è valido: azzera lo snapshot per non
-        // mostrare cost/credito stantii di un provider che ora fallisce (l'icona va neutra).
-        self.activeSnapshot = nil
-        self.limits = nil
+        // Keep-stale: un blip di rete (offline/429/refresh in corso) NON deve svuotare il pannello.
+        // Solo se l'errore segnala credenziale/account spariti (no-auth terminale) i dati non sono
+        // più validi e vanno azzerati; per gli errori transitori teniamo l'ultimo dato visibile,
+        // marcato stale via `limitsError` → recomputeStatus.
+        if Self.mapLimitsErrorPolicy(error) {
+            self.activeSnapshot = nil
+            self.limits = nil
+        }
         self.limitsError = Self.mapProviderError(error, activeProvider: self.settings.activeProviderID)
         self.logger.error("provider refresh fallito: \(error.localizedDescription, privacy: .public)")
+    }
+
+    /// Politica di invalidazione dei dati su errore di refresh.
+    /// - Returns: `true` se l'errore deve INVALIDARE i dati (credenziale/account spariti → dato non
+    ///   più valido), `false` se deve PRESERVARLI come stale (transitorio/recuperabile → tieni
+    ///   l'ultimo dato). Consulta `ClaudeLimitsError`, `ProviderError` e `URLError`.
+    private static func mapLimitsErrorPolicy(_ error: Error) -> Bool {
+        if let providerError = error as? ProviderError {
+            switch providerError {
+            case .noCredentials, .unauthorized, .noAvailableStrategy:
+                return true // account/credenziale assenti o rifiutati: dato non più valido.
+            case .refreshDelegatedToOwner, .keychainDenied, .rateLimited, .serverError, .network, .invalidResponse:
+                return false // transitorio/recuperabile: preserva l'ultimo dato.
+            }
+        }
+        if let limitsError = error as? ClaudeLimitsError {
+            switch limitsError {
+            case .noCredentials, .noRefreshToken, .refreshFailedTerminal, .unauthorized:
+                return true // credenziale/account spariti: dato non più valido.
+            case .refreshDelegatedToCLI, .refreshFailedTransient, .rateLimited, .keychainDenied,
+                 .serverError, .network, .invalidResponse:
+                return false // transitorio/recuperabile: preserva l'ultimo dato.
+            }
+        }
+        // URLError di rete (offline, host irraggiungibile, timeout) → transitorio: preserva.
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost, .timedOut:
+                return false
+            default:
+                return true // URLError non di rete (es. badURL): conservativo, invalida.
+            }
+        }
+        return true // errore sconosciuto: conservativo, invalida.
     }
 
     /// Mappa un errore del provider attivo su `AppStatus`. Gestisce sia `ProviderError`

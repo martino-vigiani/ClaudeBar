@@ -123,6 +123,7 @@ public actor ClaudeLimitsService {
         guard let result = try credentialReader(allowUI) else {
             throw ClaudeLimitsError.noCredentials
         }
+        CoreLog.keychain.info("[CRED] keychain hit allowUI=\(allowUI, privacy: .public) account=\(result.account ?? "nil")")
         let creds = try ClaudeOAuthCredentials.parse(data: result.data)
         let record = CredentialRecord(
             credentials: creds,
@@ -148,6 +149,7 @@ public actor ClaudeLimitsService {
         case .claudeCLI:
             // NON rubiamo il refresh alla CLI: rileggiamo il Keychain (Claude potrebbe aver
             // già rinnovato). Se ancora scaduto, deleghiamo.
+            CoreLog.keychain.info("[CRED] token scaduto, rileggo keychain allowUI=\(allowUI, privacy: .public)")
             if let reread = try? credentialReader(allowUI),
                let fresh = try? ClaudeOAuthCredentials.parse(data: reread.data),
                !fresh.isExpired

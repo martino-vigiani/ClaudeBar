@@ -58,11 +58,10 @@ final class IndexingProgressRelay: @unchecked Sendable {
 
 /// Adatta `ClaudeBarCore.PersistenceService` → `PersistenceServicing`.
 ///
-/// Differenze isolate qui:
-/// - Core persiste SOLO il report aggregato (`loadReport`/`saveReport`). La cache dei limiti vive
-///   in memoria dentro `ClaudeLimitsService` (`cachedSnapshot()`), quindi qui `loadCachedLimits`
-///   ritorna `nil` e `saveLimits` è un no-op: il primo `fetchUsage` a freddo è già sotto il
-///   secondo, niente serve persisterli su disco per l'MVP.
+/// Inoltro 1:1: Core persiste sia il report aggregato (`loadReport`/`saveReport`) sia l'ultimo
+/// snapshot limiti su disco (`loadLimits`/`saveLimits`, file separato `limits-cache.json`). La
+/// cache su disco copre il paint a freddo (riavvio app): la cache in memoria di `ClaudeLimitsService`
+/// vive solo per la sessione corrente.
 struct PersistenceServiceAdapter: PersistenceServicing {
     let service: PersistenceService
 
@@ -71,7 +70,7 @@ struct PersistenceServiceAdapter: PersistenceServicing {
     }
 
     func loadCachedLimits() async -> LimitsSnapshot? {
-        nil // i limiti hanno la loro cache in memoria nel ClaudeLimitsService
+        await self.service.loadLimits()
     }
 
     func saveReport(_ report: AnalyticsReport) async {
@@ -79,7 +78,7 @@ struct PersistenceServiceAdapter: PersistenceServicing {
     }
 
     func saveLimits(_ limits: LimitsSnapshot) async {
-        // no-op: vedi nota sopra.
+        await self.service.saveLimits(limits)
     }
 
     func clearCache() async {

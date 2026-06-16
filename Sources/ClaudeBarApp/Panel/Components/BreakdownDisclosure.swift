@@ -14,6 +14,7 @@ struct BreakdownDisclosure: View {
     @State private var open = false
     @State private var hovering = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
 
     private var maxValue: Double {
         max(1, items.map { showCost ? $0.cost : Double($0.tokens) }.max() ?? 1)
@@ -28,7 +29,7 @@ struct BreakdownDisclosure: View {
                 if !items.isEmpty {
                     Text("\(items.count)")
                         .font(.dsCaption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.dsSecondaryOnGlass(scheme))
                         .monospacedDigit()
                 }
                 // Hover scoped al solo chevron: tingere il chevron non deve far rivalutare
@@ -47,7 +48,7 @@ struct BreakdownDisclosure: View {
                     if items.isEmpty {
                         Text("No data in this period")
                             .font(.dsCaption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.dsSecondaryOnGlass(scheme))
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.top, DS.Spacing.s)
                     } else {
@@ -64,7 +65,7 @@ struct BreakdownDisclosure: View {
                                         .frame(width: 120, alignment: .leading)
                                     GeometryReader { geo in
                                         ZStack(alignment: .leading) {
-                                            Capsule().fill(Color.primary.opacity(0.08))
+                                            Capsule().fill(Color.primary.opacity(DS.Opacity.trackBackground))
                                             Capsule()
                                                 .fill(Color.primary.opacity(0.45))
                                                 .frame(width: max(4, geo.size.width * (value / maxValue)))
@@ -72,7 +73,7 @@ struct BreakdownDisclosure: View {
                                     }
                                     .frame(height: 6)
                                     Text(showCost ? item.cost.currencyString : item.tokens.compactString)
-                                        .font(.dsMono).foregroundStyle(.secondary)
+                                        .font(.dsMono).foregroundStyle(Color.dsSecondaryOnGlass(scheme))
                                         .frame(width: 52, alignment: .trailing)
                                 }
                             }

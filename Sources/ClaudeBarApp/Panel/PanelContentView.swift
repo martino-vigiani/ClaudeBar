@@ -28,7 +28,6 @@ struct PanelContentView<Model: PanelViewModeling>: View {
     /// Controllata dalla `CollapseHandle` sotto la fascia. Vale solo col layout limiti
     /// (anelli); negli stati error/no-auth non ci sono finestre da collassare.
     @State private var topCollapsed = false
-    @Namespace private var glassNS
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -106,16 +105,26 @@ struct PanelContentView<Model: PanelViewModeling>: View {
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.panel, style: .continuous))
         .shadow(color: .black.opacity(0.25), radius: 14, y: 6)
         .padding(DS.Spacing.l)
-        // Apertura: scale 0.96→1 + slide-down + fade (Reduce Motion → solo fade).
-        .scaleEffect(appeared || reduceMotion ? 1 : 0.96)
+        // Apertura: scale 0.96→1 + slide-down + fade, ANCORATA AL TOP (il pannello emana dall'icona
+        // della status bar, non dal centro). Aperto decine di volte/giorno → entrata RAPIDA ease-out,
+        // non lo spring lento `soft`: su un'azione così frequente uno spring con overshoot si legge
+        // come latenza. (Reduce Motion → solo fade, ancora più corto.)
+        .scaleEffect(appeared || reduceMotion ? 1 : 0.96, anchor: .top)
         .offset(y: appeared || reduceMotion ? 0 : -8)
         .opacity(appeared ? 1 : 0)
         .onAppear {
             // Refresh on-demand se i dati sono vecchi (l'adapter inoltra a AppModel.panelDidOpen()).
             model.panelDidOpen()
-            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : DS.Motion.soft) {
+            withAnimation(.easeOut(duration: reduceMotion ? 0.16 : 0.2)) {
                 appeared = true
             }
+        }
+        // L'NSPanel è RIUSATO tra le aperture e `onAppear` NON ri-scatta alla riapertura: quindi NON
+        // azzeriamo `appeared` (gestisce l'opacity → resterebbe a 0 = pannello invisibile). L'entrata
+        // animata resta una-tantum alla prima apertura. `topCollapsed` invece non tocca la
+        // visibilità: reset sicuro per riaprire con la fascia limiti espansa ("apertura pulita").
+        .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
+            topCollapsed = false
         }
         // Collapse/expand della fascia limiti → cambia il maxHeight del pannello: notifica il
         // PanelHostController perché ri-dimensioni e ri-ancori la finestra (cresce verso il basso).

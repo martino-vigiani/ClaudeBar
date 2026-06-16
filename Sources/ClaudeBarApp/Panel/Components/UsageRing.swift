@@ -69,7 +69,7 @@ struct UsageRing: View {
         return ZStack {
             // Traccia di fondo.
             Circle()
-                .stroke(Color.primary.opacity(0.10),
+                .stroke(Color.primary.opacity(DS.Opacity.trackBackground),
                         style: StrokeStyle(lineWidth: DS.Size.ringLineWidth, lineCap: .round))
 
             // Arco-fantasma "Pace": continuazione TENUE dal tip + tacca sul punto di reset

@@ -172,17 +172,27 @@ enum IconRenderer {
     }
 
     /// Adatta il colore-dato al contrasto della menu bar. Su sfondo CHIARO (Tahoe light) il verde
-    /// e l'ambra accesi staccano poco → li scuriamo del ~15% in luminanza (mantenendo la tinta,
-    /// quindi la semantica della curva). Su scuro il colore resta invariato. Solo per il colore
+    /// e l'ambra accesi staccano poco → scuriamo la LUMINOSITÀ in HSB (~25%) mantenendo tinta e
+    /// saturazione: la semantica della curva resta intatta e la resa è più nitida del taglio RGB
+    /// (che spegneva anche la saturazione). Su scuro il colore resta invariato. Solo per il colore
     /// semantico: in monocromo è il sistema a gestire il template B/N.
     private static func contrastAdjusted(_ color: NSColor, light: Bool) -> NSColor {
         guard light else { return color }
         let c = color.usingColorSpace(.sRGB) ?? color
-        let f: CGFloat = 0.85
+        // Acromatici (grigio/bianco/nero): hue è indefinito (può essere NaN) → l'init HSB darebbe
+        // un colore sballato. Per questi ricadiamo sul taglio RGB uniforme (* 0.85).
+        if c.saturationComponent < 0.001 {
+            let f: CGFloat = 0.85
+            return NSColor(
+                srgbRed: c.redComponent * f,
+                green: c.greenComponent * f,
+                blue: c.blueComponent * f,
+                alpha: c.alphaComponent)
+        }
         return NSColor(
-            srgbRed: c.redComponent * f,
-            green: c.greenComponent * f,
-            blue: c.blueComponent * f,
+            hue: c.hueComponent,
+            saturation: c.saturationComponent,
+            brightness: c.brightnessComponent * 0.75,
             alpha: c.alphaComponent)
     }
 

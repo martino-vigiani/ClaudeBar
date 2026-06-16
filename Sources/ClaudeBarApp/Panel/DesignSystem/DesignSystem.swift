@@ -54,6 +54,17 @@ enum DS {
         static let hairline: CGFloat = 1
     }
 
+    // MARK: Opacity — fondi tenui ricorrenti
+    //
+    // Centralizzati perché su Liquid Glass chiaro i valori vecchi (0.08–0.10) si lavavano
+    // fin quasi all'invisibilità. Tarati per restare percepibili su vetro chiaro senza pesare
+    // su dark. Solo i token che servono davvero (no over-tokenizzazione).
+    enum Opacity {
+        static let trackBackground: Double = 0.16   // traccia anello/barra (era 0.10 — invisibile su vetro chiaro)
+        static let badgeFill: Double = 0.12          // badge piano header (era 0.08 — illeggibile)
+        static let staleDim: Double = 0.55           // dim per stato stale
+    }
+
     // MARK: Durations / springs
     enum Motion {
         /// Molla morbida "premium" (~cubic-bezier(0.32,0.72,0,1)) per apertura/morphing.
@@ -127,7 +138,7 @@ enum UsageColorScale {
     static func state(used: Double) -> UsageState { .from(used: used) }
 
     /// Versione desaturata/dim per lo stato "stale" (mai rosso falso): vedi §3.5.
-    static func dim(_ color: Color) -> Color { color.opacity(0.55) }
+    static func dim(_ color: Color) -> Color { color.opacity(DS.Opacity.staleDim) }
 }
 
 // MARK: - Colori di superficie / hairline
@@ -137,6 +148,12 @@ extension Color {
     static let dsCardBackground = Color(nsColor: .controlBackgroundColor)
     // Nota: nessun token di tinta "clay". Il vetro del pannello è NEUTRO puro
     // (DECISIONS.md §3): nessuna tinta sul glass.
+
+    /// `.secondary` leggibile su Liquid Glass. In light il .secondary nativo (~0.5 su vetro
+    /// traslucido) si lava; usiamo labelColor a opacità controllata. In dark resta .secondary.
+    static func dsSecondaryOnGlass(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color.secondary : Color(nsColor: .labelColor).opacity(0.55)
+    }
 }
 
 // MARK: - Hover highlight (affordance puntatore, macOS)

@@ -132,6 +132,13 @@ final class AppModelPanelAdapter: PanelViewModeling {
     }
 
     func refresh() {
+        // Context-aware: in stato no-auth (token scaduto / Keychain negato) un semplice refresh non
+        // basta — serve la riconnessione resiliente (prompt Keychain + poll del refresh pigro della
+        // CLI), altrimenti il bottone sembra inerte. Negli altri stati: refresh limiti + analytics.
+        if self.model.status == .tokenExpired || self.model.status == .keychainDenied {
+            Task { await self.model.reconnect() }
+            return
+        }
         Task { await self.model.refreshLimitsNow(userInitiated: true) }
         Task { await self.model.refreshAnalytics(force: false) }
     }

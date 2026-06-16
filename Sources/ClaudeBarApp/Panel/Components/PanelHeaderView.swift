@@ -16,6 +16,7 @@ struct PanelHeaderView: View {
     let onQuit: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
     @State private var spin = false
 
     var body: some View {
@@ -32,11 +33,11 @@ struct PanelHeaderView: View {
                         Text(plan.uppercased())
                             .font(.dsEyebrow)
                             .tracking(0.6)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary.opacity(0.8))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
-                                Capsule().fill(Color.primary.opacity(0.08))
+                                Capsule().fill(Color.primary.opacity(DS.Opacity.badgeFill))
                             )
                             .fixedSize()
                     }
@@ -44,7 +45,7 @@ struct PanelHeaderView: View {
                 if let updated = lastUpdated {
                     Text(updatedText(updated))
                         .font(.dsCaption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.dsSecondaryOnGlass(scheme))
                         .monospacedDigit()
                 }
             }

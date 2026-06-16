@@ -89,7 +89,7 @@ public enum LimitsSource: String, Sendable, Equatable, Codable {
 }
 
 /// Snapshot completo dei limiti ufficiali esposto alla UI.
-public struct LimitsSnapshot: Sendable, Equatable {
+public struct LimitsSnapshot: Sendable, Equatable, Codable {
     /// Sessione 5 ore (`five_hour`). Sempre presente.
     public var fiveHour: UsageWindow
     /// Settimana (`seven_day`). Sempre presente.

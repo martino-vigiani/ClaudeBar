@@ -102,7 +102,7 @@ struct MiniUsageBar: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.primary.opacity(0.10))
+                Capsule().fill(Color.primary.opacity(DS.Opacity.trackBackground))
                 Capsule()
                     .fill(UsageColorScale.color(used: used))
                     .frame(width: max(6, geo.size.width * min(1, used / 100)))
@@ -118,6 +118,7 @@ struct MiniUsageBar: View {
 struct EyebrowTag: View {
     let text: String
     var symbol: String?
+    @Environment(\.colorScheme) private var scheme
     var body: some View {
         HStack(spacing: 4) {
             if let symbol {
@@ -127,7 +128,7 @@ struct EyebrowTag: View {
                 .font(.dsEyebrow)
                 .tracking(0.6)
         }
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Color.dsSecondaryOnGlass(scheme))
     }
 }
 
@@ -136,13 +137,14 @@ struct EyebrowTag: View {
 struct ResetCountdown: View {
     let resetsAt: Date
     let kind: WindowKind
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let remaining = max(0, resetsAt.timeIntervalSince(context.date))
             Text("reset \(relative(remaining)) · \(absolute)")
                 .font(.dsMono)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.dsSecondaryOnGlass(scheme))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)

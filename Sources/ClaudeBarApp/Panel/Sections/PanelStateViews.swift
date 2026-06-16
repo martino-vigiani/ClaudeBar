@@ -12,10 +12,10 @@ struct LimitsLoadingView: View {
         HStack(alignment: .top, spacing: DS.Spacing.l) {
             ForEach(0..<2, id: \.self) { _ in
                 VStack(spacing: DS.Spacing.s) {
-                    Capsule().fill(Color.primary.opacity(0.08)).frame(width: 70, height: 10)
-                    Circle().fill(Color.primary.opacity(0.06))
+                    Capsule().fill(Color.primary.opacity(DS.Opacity.trackBackground)).frame(width: 70, height: 10)
+                    Circle().fill(Color.primary.opacity(DS.Opacity.trackBackground))
                         .frame(width: DS.Size.ring, height: DS.Size.ring)
-                    Capsule().fill(Color.primary.opacity(0.08)).frame(width: 90, height: 9)
+                    Capsule().fill(Color.primary.opacity(DS.Opacity.trackBackground)).frame(width: 90, height: 9)
                 }
                 .frame(maxWidth: .infinity)
             }

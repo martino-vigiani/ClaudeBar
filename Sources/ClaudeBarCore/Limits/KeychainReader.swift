@@ -58,6 +58,7 @@ public enum KeychainReader {
 
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
+        CoreLog.keychain.debug("[KC] candidates allowUI=\(allowUI, privacy: .public) status=\(status, privacy: .public)")
 
         if status == errSecItemNotFound { return [] }
         try throwIfDenied(status)
@@ -92,6 +93,7 @@ public enum KeychainReader {
 
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
+        CoreLog.keychain.debug("[KC] readData allowUI=\(allowUI, privacy: .public) status=\(status, privacy: .public)")
         try throwIfDenied(status)
         guard status == errSecSuccess else {
             throw ClaudeLimitsError.serverError(code: Int(status), body: "Keychain read status \(status)")
@@ -105,7 +107,12 @@ public enum KeychainReader {
     /// Legge il candidato più recente. Ritorna `nil` se non ci sono item.
     public static func readMostRecent(allowUI: Bool) throws -> ReadResult? {
         let all = try candidates(allowUI: allowUI)
-        guard let best = all.first else { return nil }
+        guard let best = all.first else {
+            CoreLog.keychain.info("[KC] readMostRecent allowUI=\(allowUI, privacy: .public) nessun candidato")
+            return nil
+        }
+        // account = etichetta (non un segreto) ma è un identificativo: redatto in release.
+        CoreLog.keychain.info("[KC] readMostRecent allowUI=\(allowUI, privacy: .public) account=\(best.account ?? "nil")")
         let data = try readData(for: best, allowUI: allowUI)
         return ReadResult(data: data, account: best.account)
     }

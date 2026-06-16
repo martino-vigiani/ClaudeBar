@@ -11,6 +11,11 @@ public actor PersistenceService {
         self.url = url
     }
 
+    /// File separato per la cache limiti, accanto a quello del report (stessa dir).
+    private var limitsURL: URL {
+        url.deletingLastPathComponent().appendingPathComponent("limits-cache.json", isDirectory: false)
+    }
+
     /// Carica l'ultimo report salvato, se compatibile con i prezzi correnti.
     public func loadReport(pricingFingerprint: String = PricingTable.fingerprint()) -> AnalyticsReport? {
         guard let data = try? Data(contentsOf: url),
@@ -27,6 +32,48 @@ public actor PersistenceService {
     /// Non è un errore se il file non esiste.
     public func clear() {
         try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Carica l'ultimo snapshot limiti salvato, per il paint a freddo.
+    /// Ritorna `nil` se schema incompatibile o cache troppo vecchia (>24h, inutile a freddo).
+    /// Tra 5min e 24h lo snapshot è marcato `.stale` così la UI non lo spaccia per fresco.
+    public func loadLimits() -> LimitsSnapshot? {
+        guard let data = try? Data(contentsOf: limitsURL),
+              let file = try? JSONDecoder().decode(LimitsCacheFile.self, from: data)
+        else { return nil }
+        guard file.schemaVersion == LimitsCacheFile.schemaVersion else { return nil }
+        let age = Date().timeIntervalSince(file.savedAt)
+        // Troppo vecchio per il paint a freddo: meglio nessun dato che un dato fuorviante.
+        guard age <= 24 * 60 * 60 else { return nil }
+        var snapshot = file.snapshot
+        // Oltre i 5 minuti il dato non è più "fresco": badge stale per non ingannare la UI.
+        if age > 5 * 60 {
+            snapshot.source = .stale
+        }
+        return snapshot
+    }
+
+    /// Salva lo snapshot limiti (atomico), su file separato da quello del report.
+    public func saveLimits(_ snapshot: LimitsSnapshot) {
+        AppPaths.ensureDirectory(limitsURL.deletingLastPathComponent())
+        let file = LimitsCacheFile(
+            schemaVersion: LimitsCacheFile.schemaVersion,
+            savedAt: Date(),
+            snapshot: snapshot)
+        guard let data = try? JSONEncoder().encode(file) else { return }
+        let tmp = limitsURL.deletingLastPathComponent()
+            .appendingPathComponent(".tmp-\(UUID().uuidString).json", isDirectory: false)
+        do {
+            try data.write(to: tmp, options: [.atomic])
+            if FileManager.default.fileExists(atPath: limitsURL.path) {
+                _ = try FileManager.default.replaceItemAt(limitsURL, withItemAt: tmp)
+            } else {
+                try FileManager.default.moveItem(at: tmp, to: limitsURL)
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: tmp)
+            CoreLog.persistence.error("saveLimits failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     /// Salva il report (atomico).
