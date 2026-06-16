@@ -233,3 +233,18 @@ private struct CardBezel: ViewModifier {
             }
     }
 }
+
+// MARK: - Press feedback
+
+/// Stile bottone con scale-on-press: ogni pressable deve "rispondere" al tocco. Scale + opacity
+/// volutamente marcati (0.94/0.8) così il feedback è percepibile su trackpad. Usato dove
+/// `.buttonStyle(.plain)` non darebbe nessun feedback tattile.
+struct PressScaleButtonStyle: ButtonStyle {
+    let reduceMotion: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}

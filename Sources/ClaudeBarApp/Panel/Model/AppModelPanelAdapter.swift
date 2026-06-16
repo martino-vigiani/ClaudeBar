@@ -30,7 +30,13 @@ final class AppModelPanelAdapter: PanelViewModeling {
         case .ready: .ok
         case let .stale(since): .stale(since: since)
         case .noSubscription: .noSubscription
-        case .tokenExpired, .keychainDenied: .noAuth
+        case .tokenExpired, .keychainDenied:
+            // Sessione da riconnettere → muro no-auth con il bottone Reconnect (che ora rinnova il
+            // token in 1 tap via self-refresh) + feedback "Reconnecting…". L'icona menu bar continua a
+            // mostrare l'ultimo uso noto. Niente keep-stale qui: numeri stale nasconderebbero la CTA di
+            // recupero e il banner "Refreshing…" resterebbe fisso. Il keep-stale vale per gli errori
+            // TRANSITORI (.offline sotto, e mapLimitsErrorPolicy che preserva i dati su rete/429).
+            .noAuth
         case .offline: .stale(since: self.model.lastLimitsRefresh ?? Date())
         case let .error(message): .error(message: message)
         }
@@ -54,6 +60,10 @@ final class AppModelPanelAdapter: PanelViewModeling {
     var isRefreshing: Bool {
         self.model.isRefreshingLimits || self.model.isReconnecting || self.model.indexingProgress != nil
     }
+
+    /// Solo la riconnessione esplicita (model.reconnect: prompt + poll bounded ≈45s). NON include il
+    /// refresh passivo on-open, così quello non disabilita il bottone Reconnect ("reconnect non va").
+    var isReconnecting: Bool { self.model.isReconnecting }
 
     // MARK: - Finestre
 

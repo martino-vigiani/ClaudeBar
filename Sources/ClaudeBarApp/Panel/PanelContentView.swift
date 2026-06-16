@@ -109,21 +109,29 @@ struct PanelContentView<Model: PanelViewModeling>: View {
         // della status bar, non dal centro). Aperto decine di volte/giorno → entrata RAPIDA ease-out,
         // non lo spring lento `soft`: su un'azione così frequente uno spring con overshoot si legge
         // come latenza. (Reduce Motion → solo fade, ancora più corto.)
-        .scaleEffect(appeared || reduceMotion ? 1 : 0.96, anchor: .top)
-        .offset(y: appeared || reduceMotion ? 0 : -8)
-        .opacity(appeared ? 1 : 0)
+        .scaleEffect(appeared || reduceMotion ? 1 : 0.92, anchor: .top)
+        .offset(y: appeared || reduceMotion ? 0 : -12)
+        // `|| reduceMotion`: coerente con scale/offset, ma soprattutto SICUREZZA — l'opacity non deve
+        // mai restare a 0 per un segnale d'entrata mancato (pannello invisibile-ma-cliccabile).
+        .opacity(appeared || reduceMotion ? 1 : 0)
         .onAppear {
-            // Refresh on-demand se i dati sono vecchi (l'adapter inoltra a AppModel.panelDidOpen()).
-            model.panelDidOpen()
-            withAnimation(.easeOut(duration: reduceMotion ? 0.16 : 0.2)) {
-                appeared = true
+            // Refresh-on-open ed entrata animata li guida il `willShow` del controller (affidabile a
+            // OGNI apertura, 1ª inclusa) → qui NON chiamiamo panelDidOpen, così il primo open non fa un
+            // DOPPIO refresh (onAppear + willShow). Backstop di visibilità: se il willShow non arrivasse
+            // al primissimo open (view appena montata), garantiamo comunque la visibilità dopo un attimo
+            // — meglio "nessuna animazione" che "pannello invisibile ma cliccabile".
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                if !appeared { appeared = true }
             }
         }
-        // L'NSPanel è RIUSATO tra le aperture e `onAppear` NON ri-scatta alla riapertura: quindi NON
-        // azzeriamo `appeared` (gestisce l'opacity → resterebbe a 0 = pannello invisibile). L'entrata
-        // animata resta una-tantum alla prima apertura. `topCollapsed` invece non tocca la
-        // visibilità: reset sicuro per riaprire con la fascia limiti espansa ("apertura pulita").
+        // L'NSPanel è RIUSATO e `onAppear` NON ri-scatta alla riapertura: il PanelHostController posta
+        // `.claudeBarPanelWillShow` a OGNI apertura → qui ri-facciamo refresh-on-open + entrata.
+        .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelWillShow)) { _ in
+            model.panelDidOpen()
+            animateEntrance()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .claudeBarPanelDidHide)) { _ in
+            appeared = false
             topCollapsed = false
         }
         // Collapse/expand della fascia limiti → cambia il maxHeight del pannello: notifica il
@@ -133,6 +141,16 @@ struct PanelContentView<Model: PanelViewModeling>: View {
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: .claudeBarPanelContentDidResize, object: nil)
             }
+        }
+    }
+
+    /// Ri-esegue l'entrata animata (scale/slide/fade ancorata al top): reset a `false`, poi
+    /// animazione a `true` nel run loop successivo così SwiftUI parte dallo stato iniziale e anima
+    /// in ingresso. Chiamata a ogni apertura (onAppear alla prima, willShow alle successive).
+    private func animateEntrance() {
+        appeared = false
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: reduceMotion ? 0.18 : 0.24)) { appeared = true }
         }
     }
 
@@ -164,7 +182,7 @@ struct PanelContentView<Model: PanelViewModeling>: View {
                 onHowTo: { model.openSettings() },
                 providerName: model.activeProvider?.name ?? "Claude",
                 message: noAuthMessage,
-                isReconnecting: model.isRefreshing)
+                isReconnecting: model.isReconnecting)
 
         case .noSubscription:
             NoSubscriptionView()
@@ -228,7 +246,7 @@ private struct CollapseHandle: View {
             .contentShape(Rectangle())
             .padding(.vertical, 2)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleButtonStyle(reduceMotion: reduceMotion))
         .onHover { hovering = $0 }
         .animation(reduceMotion ? nil : DS.Motion.hover, value: hovering)
         .help(collapsed ? "Show limits detail" : "Collapse to rings — more analytics")

@@ -213,7 +213,9 @@ final class AppModel {
         //  - .keychainDenied → lettura no-UI negata / ACL resettato dalla riscrittura della CLI: solo
         //    un fetch userInitiated (prompt) ri-autorizza → l'utente ripreme Reconnect.
         //  - .ready/.stale → già riconnesso. Qualsiasi altro errore → non è risolvibile pollando.
-        guard self.statusIsTokenExpired else { return }
+        guard self.statusIsTokenExpired else {
+            return
+        }
 
         // 2) Poll bounded no-UI per raccogliere il refresh pigro della CLI. Awaitato in modo che
         //    `isReconnecting` resti true (UI "riconnessione in corso") finché il poll non finisce.
@@ -328,7 +330,11 @@ final class AppModel {
             let freshnessThreshold: TimeInterval = 30
             let isStaleLimits = self.lastLimitsRefresh.map { Date().timeIntervalSince($0) > freshnessThreshold } ?? true
             if isStaleLimits {
-                Task { await self.refreshLimitsNow(userInitiated: true) }
+                // `userInitiated: false`: l'apertura-pannello ora innesca un refresh a OGNI apertura
+                // (segnale willShow). È automatico, NON un'azione esplicita → il Keychain NON deve
+                // promptare qui (sarebbe il prompt-a-ogni-apertura). Il prompt resta sui bottoni
+                // espliciti Refresh/Reconnect (userInitiated: true). Stessa logica di handleWake.
+                Task { await self.refreshLimitsNow(userInitiated: false) }
             }
         }
         Task { await self.refreshAnalytics(force: false) }
@@ -509,6 +515,10 @@ final class AppModel {
         self.logger.error("provider refresh fallito: \(error.localizedDescription, privacy: .public)")
     }
 
+    // ATTENZIONE — asse ORTOGONALE a `mapProviderError`/`mapLimitsError` (errore → AppStatus) e a
+    // `isTerminal`: aggiungendo un nuovo case d'errore va aggiornato ANCHE qui, oltre che nei mapper.
+    // Se lo dimentichi, il nuovo case cade nel `return true` finale (invalida i dati come stato
+    // sconosciuto), svuotando il pannello su quello che magari è solo un blip transitorio.
     /// Politica di invalidazione dei dati su errore di refresh.
     /// - Returns: `true` se l'errore deve INVALIDARE i dati (credenziale/account spariti → dato non
     ///   più valido), `false` se deve PRESERVARLI come stale (transitorio/recuperabile → tieni

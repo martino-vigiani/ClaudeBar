@@ -81,7 +81,7 @@ struct NoAuthView: View {
     var isReconnecting: Bool = false
 
     private var resolvedMessage: String {
-        message ?? String(localized: "Sign in with Claude Code to see your session and weekly limits.")
+        message ?? String(localized: "Your Claude Code session expired. Tap Reconnect to renew it — or open Claude Code to sign in.")
     }
 
     var body: some View {

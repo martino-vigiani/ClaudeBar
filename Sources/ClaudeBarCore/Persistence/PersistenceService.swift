@@ -55,44 +55,35 @@ public actor PersistenceService {
 
     /// Salva lo snapshot limiti (atomico), su file separato da quello del report.
     public func saveLimits(_ snapshot: LimitsSnapshot) {
-        AppPaths.ensureDirectory(limitsURL.deletingLastPathComponent())
-        let file = LimitsCacheFile(
-            schemaVersion: LimitsCacheFile.schemaVersion,
-            savedAt: Date(),
-            snapshot: snapshot)
+        let file = LimitsCacheFile(savedAt: Date(), snapshot: snapshot)
         guard let data = try? JSONEncoder().encode(file) else { return }
-        let tmp = limitsURL.deletingLastPathComponent()
-            .appendingPathComponent(".tmp-\(UUID().uuidString).json", isDirectory: false)
-        do {
-            try data.write(to: tmp, options: [.atomic])
-            if FileManager.default.fileExists(atPath: limitsURL.path) {
-                _ = try FileManager.default.replaceItemAt(limitsURL, withItemAt: tmp)
-            } else {
-                try FileManager.default.moveItem(at: tmp, to: limitsURL)
-            }
-        } catch {
-            try? FileManager.default.removeItem(at: tmp)
-            CoreLog.persistence.error("saveLimits failed: \(error.localizedDescription, privacy: .public)")
-        }
+        self.atomicWrite(data, to: limitsURL)
     }
 
     /// Salva il report (atomico).
     public func saveReport(_ report: AnalyticsReport, pricingFingerprint: String = PricingTable.fingerprint()) {
-        AppPaths.ensureDirectory(url.deletingLastPathComponent())
         let file = AnalyticsCacheFile(pricingFingerprint: pricingFingerprint, report: report)
         guard let data = try? JSONEncoder().encode(file) else { return }
-        let tmp = url.deletingLastPathComponent()
+        self.atomicWrite(data, to: url)
+    }
+
+    /// Scrittura atomica condivisa: assicura la dir di destinazione, scrive su un tmp con nome
+    /// univoco (`.atomic`) e poi sostituisce/sposta sul path finale. In caso di errore rimuove il
+    /// tmp e logga col nome del file di destinazione. Il `data` è già codificato dal chiamante.
+    private func atomicWrite(_ data: Data, to destination: URL) {
+        AppPaths.ensureDirectory(destination.deletingLastPathComponent())
+        let tmp = destination.deletingLastPathComponent()
             .appendingPathComponent(".tmp-\(UUID().uuidString).json", isDirectory: false)
         do {
             try data.write(to: tmp, options: [.atomic])
-            if FileManager.default.fileExists(atPath: url.path) {
-                _ = try FileManager.default.replaceItemAt(url, withItemAt: tmp)
+            if FileManager.default.fileExists(atPath: destination.path) {
+                _ = try FileManager.default.replaceItemAt(destination, withItemAt: tmp)
             } else {
-                try FileManager.default.moveItem(at: tmp, to: url)
+                try FileManager.default.moveItem(at: tmp, to: destination)
             }
         } catch {
             try? FileManager.default.removeItem(at: tmp)
-            CoreLog.persistence.error("saveReport failed: \(error.localizedDescription, privacy: .public)")
+            CoreLog.persistence.error("atomicWrite \(destination.lastPathComponent, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

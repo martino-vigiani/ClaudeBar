@@ -262,6 +262,9 @@ protocol PanelViewModeling: AnyObject {
     var account: AccountVM? { get }
     var lastUpdated: Date? { get }
     var isRefreshing: Bool { get }
+    /// `true` SOLO durante una riconnessione esplicita in corso (prompt + poll). Serve a disabilitare
+    /// il bottone Reconnect senza che un refresh PASSIVO (refresh-on-open) lo blocchi. Default `false`.
+    var isReconnecting: Bool { get }
 
     /// Finestra più critica (guida hero/icona). nil quando non disponibile.
     var criticalWindow: UsageWindowVM? { get }
@@ -298,6 +301,9 @@ protocol PanelViewModeling: AnyObject {
 }
 
 extension PanelViewModeling {
+    /// Default `false`: solo l'adapter reale espone lo stato di riconnessione dell'AppModel.
+    var isReconnecting: Bool { false }
+
     /// Default no-op: i mock/adapter che non hanno bisogno del refresh on-demand non devono implementarla.
     func panelDidOpen() {}
 

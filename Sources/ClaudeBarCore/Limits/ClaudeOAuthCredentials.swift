@@ -63,6 +63,29 @@ public struct ClaudeOAuthCredentials: Sendable, Equatable {
             subscriptionType: oauth.subscriptionType)
     }
 
+    /// Riscrive il JSON GREZZO del Keychain patchando SOLO i campi rinnovati dell'oggetto
+    /// `claudeAiOauth` (accessToken/refreshToken/expiresAt) e PRESERVANDO tutto il resto
+    /// (scopes, subscriptionType, rateLimitTier e qualsiasi campo sconosciuto scritto dalla CLI).
+    ///
+    /// Serve al write-back del self-refresh: la CLI deve ritrovare un item INTEGRO, non i soli 3
+    /// campi che parsiamo noi. Lavoriamo sul dizionario originale, non su `ClaudeOAuthCredentials`,
+    /// proprio per non perdere i campi non modellati. `expiresAt` torna in ms-epoch come all'origine.
+    /// - Returns: i nuovi byte JSON, o `nil` se l'originale non è il JSON atteso (write-back saltato).
+    public static func patchedRawJSON(original: Data, refreshed: ClaudeOAuthCredentials) -> Data? {
+        guard var root = (try? JSONSerialization.jsonObject(with: original)) as? [String: Any],
+              var oauth = root["claudeAiOauth"] as? [String: Any]
+        else { return nil }
+        // Senza una scadenza nuova NON riscriviamo: un accessToken fresco accanto all'`expiresAt`
+        // vecchio (già passato) farebbe vedere il token come scaduto sia a noi sia alla CLI → loop di
+        // refresh. Oggi `refresh()` setta sempre un expiresAt futuro, ma il guard rende l'invariante esplicita.
+        guard let exp = refreshed.expiresAt else { return nil }
+        oauth["accessToken"] = refreshed.accessToken
+        if let rt = refreshed.refreshToken { oauth["refreshToken"] = rt }
+        oauth["expiresAt"] = Int((exp.timeIntervalSince1970 * 1000).rounded())
+        root["claudeAiOauth"] = oauth
+        return try? JSONSerialization.data(withJSONObject: root)
+    }
+
     private struct Root: Decodable {
         let claudeAiOauth: OAuth?
     }

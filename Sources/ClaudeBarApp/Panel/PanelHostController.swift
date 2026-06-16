@@ -11,6 +11,11 @@ extension Notification.Name {
     /// (es. collapse/expand della fascia limiti). Il controller ri-dimensiona e ri-ancora il
     /// pannello mantenendo il top edge sotto il bottone status (cresce verso il basso).
     static let claudeBarPanelContentDidResize = Notification.Name("claudeBarPanelContentDidResize")
+
+    /// Postata a OGNI apertura del pannello. La SwiftUI view la osserva per ri-eseguire il
+    /// refresh-on-open + l'entrata animata: l'NSPanel è riusato e `onAppear` ri-scatta solo alla
+    /// prima apertura, quindi serve un segnale esplicito per-apertura.
+    static let claudeBarPanelWillShow = Notification.Name("claudeBarPanelWillShow")
 }
 
 /// NSPanel borderless non-activating che ospita la SwiftUI view del pannello (Liquid Glass)
@@ -61,6 +66,12 @@ final class PanelHostController {
         panel.makeKeyAndOrderFront(nil)
         self.installDismissMonitors()
         self.installContentResizeObserver()
+        // Segnala l'apertura alla view: l'NSPanel è riusato e `onAppear` ri-scatta solo la prima
+        // volta. Async così il subscriber SwiftUI è già montato (positionPanel ha forzato il layout
+        // sopra) e riceve anche il primissimo willShow.
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .claudeBarPanelWillShow, object: nil)
+        }
     }
 
     func close() {

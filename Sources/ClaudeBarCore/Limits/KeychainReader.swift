@@ -34,10 +34,19 @@ public enum KeychainReader {
         var sortDate: Date { modifiedAt ?? createdAt ?? .distantPast }
     }
 
-    /// Risultato della lettura: dati + account selezionato.
+    /// Risultato della lettura: dati + account selezionato + ref persistente dell'item.
     public struct ReadResult: Sendable, Equatable {
         public let data: Data
         public let account: String?
+        /// Ref persistente dell'item letto: identifica ESATTAMENTE quell'item per un eventuale
+        /// write-back (multi-account safe). `nil` per i reader fake dei test (nessuna scrittura).
+        public let persistentRef: Data?
+
+        public init(data: Data, account: String?, persistentRef: Data? = nil) {
+            self.data = data
+            self.account = account
+            self.persistentRef = persistentRef
+        }
     }
 
     #if os(macOS)
@@ -114,7 +123,28 @@ public enum KeychainReader {
         // account = etichetta (non un segreto) ma è un identificativo: redatto in release.
         CoreLog.keychain.info("[KC] readMostRecent allowUI=\(allowUI, privacy: .public) account=\(best.account ?? "nil")")
         let data = try readData(for: best, allowUI: allowUI)
-        return ReadResult(data: data, account: best.account)
+        return ReadResult(data: data, account: best.account, persistentRef: best.persistentRef)
+    }
+
+    /// Riscrive in-place i byte di un item esistente identificato dal suo `persistentRef`.
+    /// Usato SOLO dal write-back del self-refresh (vedi `ClaudeLimitsService`): rinnoviamo il token
+    /// CLI e RISCRIVIAMO il medesimo item condiviso così la CLI resta in sync (niente refresh
+    /// "rubato": l'item è aggiornato per entrambi). `SecItemUpdate` su `kSecValueData` PRESERVA la
+    /// ACL esistente (non ricrea l'item) → le letture successive restano silenziose.
+    ///
+    /// Non lancia: la semantica delicata (catena refresh / pre-check) la decide il chiamante sul
+    /// `Bool` di ritorno. In background (no-UI) la modifica di un item altrui può fallire pulito
+    /// (`errSecInteractionNotAllowed`) → il chiamante NON consuma il refresh_token. Ritorna `true`
+    /// solo su `errSecSuccess`.
+    @discardableResult
+    public static func writeBack(_ data: Data, persistentRef: Data) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecValuePersistentRef as String: persistentRef,
+        ]
+        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        CoreLog.keychain.info("[KC] writeBack status=\(status, privacy: .public)")
+        return status == errSecSuccess
     }
 
     /// Applica i flag per una query non interattiva (nessun prompt UI).
@@ -142,6 +172,8 @@ public enum KeychainReader {
         throw ClaudeLimitsError.noCredentials
     }
     public static func readMostRecent(allowUI _: Bool) throws -> ReadResult? { nil }
+    @discardableResult
+    public static func writeBack(_: Data, persistentRef _: Data) -> Bool { false }
 
     #endif
 }

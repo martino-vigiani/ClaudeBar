@@ -8,7 +8,7 @@ import Foundation
 /// Schema versionato della cache limiti su disco.
 struct LimitsCacheFile: Codable {
     static let schemaVersion = 1
-    let schemaVersion: Int
+    var schemaVersion: Int = LimitsCacheFile.schemaVersion
     /// Istante di salvataggio: usato per la staleness al paint a freddo.
     let savedAt: Date
     let snapshot: LimitsSnapshot

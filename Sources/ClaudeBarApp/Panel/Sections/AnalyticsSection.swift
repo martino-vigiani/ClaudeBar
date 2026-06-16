@@ -379,20 +379,6 @@ extension Int {
     }
 }
 
-// MARK: - Press feedback
-
-/// Stile bottone con scale-on-press: ogni pressable deve "rispondere" al tocco (scale 0.97).
-/// Usato dove `.buttonStyle(.plain)` non darebbe nessun feedback tattile.
-private struct PressScaleButtonStyle: ButtonStyle {
-    let reduceMotion: Bool
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .opacity(configuration.isPressed ? 0.9 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
-    }
-}
-
 #Preview("AnalyticsSection") {
     ScrollView {
         AnalyticsSection(analytics: MockPanelViewModel.sampleAnalytics(range: .today),

@@ -9,11 +9,16 @@ public actor ClaudeLimitsService {
     /// Default = chiamata statica reale a `KeychainReader.readMostRecent(allowUI:)`.
     public typealias CredentialReader = @Sendable (_ allowUI: Bool) throws -> KeychainReader.ReadResult?
 
+    /// Seam di SCRITTURA del Keychain (write-back del token auto-rinnovato): iniettabile per i test.
+    /// Ritorna `true` se la scrittura è riuscita. Default = `KeychainReader.writeBack`.
+    public typealias CredentialWriter = @Sendable (_ data: Data, _ persistentRef: Data) -> Bool
+
     private let session: URLSession
     private let claudeCodeVersion: String?
     private let environment: [String: String]
     private let now: @Sendable () -> Date
     private let credentialReader: CredentialReader
+    private let credentialWriter: CredentialWriter
 
     /// Ultimo snapshot riuscito (per cachedSnapshot / degradazione su 429).
     private var lastSnapshot: LimitsSnapshot?
@@ -23,19 +28,25 @@ public actor ClaudeLimitsService {
     private var cachedCredentials: CredentialRecord?
     /// Gate 429: non rifacciamo la GET prima di questo istante.
     private var blockedUntil: Date?
+    /// Self-refresh in volo: coalescing per evitare due refresh concorrenti che consumerebbero lo
+    /// stesso refresh_token (Reconnect ravvicinati / doppio trigger). Il secondo chiamante aspetta il
+    /// risultato del primo invece di lanciarne un altro.
+    private var inFlightSelfRefresh: Task<ClaudeOAuthCredentials?, Error>?
 
     public init(
         session: URLSession = ClaudeLimitsService.makeSession(),
         claudeCodeVersion: String? = nil,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         now: @escaping @Sendable () -> Date = { Date() },
-        credentialReader: @escaping CredentialReader = { try KeychainReader.readMostRecent(allowUI: $0) })
+        credentialReader: @escaping CredentialReader = { try KeychainReader.readMostRecent(allowUI: $0) },
+        credentialWriter: @escaping CredentialWriter = { KeychainReader.writeBack($0, persistentRef: $1) })
     {
         self.session = session
         self.claudeCodeVersion = claudeCodeVersion
         self.environment = environment
         self.now = now
         self.credentialReader = credentialReader
+        self.credentialWriter = credentialWriter
     }
 
     /// URLSession dedicata: timeout 30s, no cookie, no cache su disco.
@@ -147,10 +158,10 @@ public actor ClaudeLimitsService {
 
         switch record.owner {
         case .claudeCLI:
-            // NON rubiamo il refresh alla CLI: rileggiamo il Keychain (Claude potrebbe aver
-            // già rinnovato). Se ancora scaduto, deleghiamo.
+            // Prima chance: la CLI potrebbe aver GIÀ rinnovato → rileggiamo il Keychain.
             CoreLog.keychain.info("[CRED] token scaduto, rileggo keychain allowUI=\(allowUI, privacy: .public)")
-            if let reread = try? credentialReader(allowUI),
+            let reread = try? credentialReader(allowUI)
+            if let reread,
                let fresh = try? ClaudeOAuthCredentials.parse(data: reread.data),
                !fresh.isExpired
             {
@@ -161,6 +172,19 @@ public actor ClaudeLimitsService {
                     source: .claudeKeychain,
                     accountLabel: reread.account)
                 return fresh
+            }
+            // Seconda chance: self-refresh + write-back nell'item CONDIVISO, SOLO su azione utente
+            // (`allowUI`). Non "rubiamo" il refresh: rinnoviamo e RISCRIVIAMO l'item, così la CLI
+            // ritrova il token nuovo e resta in sync. `selfRefreshClaudeCLI` ritorna nil se non è
+            // sicuro (item non scrivibile) → cade sulla delega; throwa se il refresh fallisce.
+            if allowUI, let reread, let ref = reread.persistentRef,
+               let stale = try? ClaudeOAuthCredentials.parse(data: reread.data),
+               let rt = stale.refreshToken, !rt.isEmpty,
+               let refreshed = try await selfRefreshClaudeCLI(
+                   original: reread.data, refreshToken: rt, existing: stale,
+                   persistentRef: ref, account: reread.account)
+            {
+                return refreshed
             }
             throw ClaudeLimitsError.refreshDelegatedToCLI
 
@@ -182,6 +206,107 @@ public actor ClaudeLimitsService {
                 source: .memoryCache)
             return refreshed
         }
+    }
+
+    /// Self-refresh del token CLI con WRITE-BACK nell'item Keychain condiviso.
+    ///
+    /// Ridefinizione sicura della "regola d'oro": rinnovare il token della CLI è ammesso SOLO se
+    /// subito dopo RISCRIVIAMO l'item condiviso. Altrimenti, se il server ruota il refresh_token,
+    /// la CLI resterebbe col token vecchio (morto) → logout. Il PRE-CHECK di scrivibilità (write
+    /// idempotente degli stessi byte) verifica a runtime che POTREMO riscrivere PRIMA di consumare
+    /// il refresh_token: se non possiamo scrivere, non lo tocchiamo e deleghiamo alla CLI.
+    ///
+    /// - Returns: le creds rinnovate, oppure `nil` se non è sicuro procedere (→ il chiamante delega).
+    /// - Throws: `refreshFailedTransient`/`refreshFailedTerminal` se il refresh di rete fallisce.
+    private func selfRefreshClaudeCLI(
+        original: Data,
+        refreshToken rt: String,
+        existing: ClaudeOAuthCredentials,
+        persistentRef ref: Data,
+        account: String?) async throws -> ClaudeOAuthCredentials?
+    {
+        // COALESCING: se un self-refresh è già in volo, aspetta IL SUO esito invece di lanciarne un
+        // secondo — due refresh concorrenti consumerebbero lo stesso refresh_token e uno prenderebbe
+        // invalid_grant (Reconnect ravvicinati / doppio trigger). I parametri del secondo chiamante
+        // sono equivalenti: si refresha la STESSA credenziale condivisa.
+        if let inFlight = inFlightSelfRefresh {
+            return try await inFlight.value
+        }
+        let task = Task { [self] in
+            try await performSelfRefresh(
+                original: original, refreshToken: rt, existing: existing,
+                persistentRef: ref, account: account)
+        }
+        inFlightSelfRefresh = task
+        defer { inFlightSelfRefresh = nil }
+        return try await task.value
+    }
+
+    /// Corpo del self-refresh (pre-check → refresh → write-back). Invocato dietro il coalescing di
+    /// `selfRefreshClaudeCLI`, mai direttamente.
+    private func performSelfRefresh(
+        original: Data,
+        refreshToken rt: String,
+        existing: ClaudeOAuthCredentials,
+        persistentRef ref: Data,
+        account: String?) async throws -> ClaudeOAuthCredentials?
+    {
+        // 1) PRE-CHECK: write idempotente degli stessi byte. Se fallisce (ACL nega / no-UI in
+        //    background), NON tocchiamo il refresh_token e deleghiamo: meglio "apri Claude" che
+        //    rischiare di rompere il login della CLI.
+        guard credentialWriter(original, ref) else {
+            CoreLog.keychain.info("[CRED] self-refresh: pre-check write FALLITO → delego alla CLI")
+            return nil
+        }
+
+        // 2) Refresh vero (consuma il refresh_token).
+        let refreshed: ClaudeOAuthCredentials
+        do {
+            refreshed = try await ClaudeTokenRefresher.refresh(
+                refreshToken: rt, existing: existing, session: session, now: now())
+        } catch let ClaudeLimitsError.refreshFailedTerminal(message) {
+            // refresh_token morto: la CLI può averlo ruotato CONCORRENTEMENTE. Reread una volta
+            // (con UI: l'utente sta riconnettendo): se ora è fresco usalo, altrimenti ri-login.
+            if let reread = try? credentialReader(true),
+               let fresh = try? ClaudeOAuthCredentials.parse(data: reread.data), !fresh.isExpired
+            {
+                cachedCredentials = CredentialRecord(
+                    credentials: fresh, owner: .claudeCLI, source: .claudeKeychain, accountLabel: reread.account)
+                return fresh
+            }
+            throw ClaudeLimitsError.refreshFailedTerminal(message)
+        }
+
+        // 3) WRITE-BACK (con retry): patcha SOLO i 3 campi nel JSON grezzo (preserva tutto il resto)
+        //    e riscrive l'item condiviso. Il pre-check è passato pochi ms fa, ma resta una finestra
+        //    TOCTOU: tra pre-check e qui la CLI può aver riscritto l'item (nuovo persistentRef) → il
+        //    primo update fallirebbe. Ritentiamo poche volte (no-prompt: ref già autorizzato) per
+        //    coprire la finestra; ogni tentativo è veloce (un fallimento da ref stale è errSecItemNotFound).
+        guard let patched = ClaudeOAuthCredentials.patchedRawJSON(original: original, refreshed: refreshed) else {
+            CoreLog.keychain.error("[CRED] self-refresh: patch JSON fallito (item non riscritto)")
+            return refreshed
+        }
+        var wroteBack = false
+        for _ in 0 ..< 3 where !wroteBack {
+            wroteBack = credentialWriter(patched, ref)
+        }
+        if wroteBack {
+            CoreLog.keychain.info("[CRED] self-refresh write-back ok")
+        } else if (refreshed.refreshToken ?? rt) != rt {
+            // Write-back fallito DOPO una ROTAZIONE del refresh_token: il vecchio è ora morto e non
+            // siamo riusciti a scrivere il nuovo nell'item condiviso → la CLI può richiedere ri-login.
+            // (Se la CLI ha riscritto l'item lei stessa — causa più probabile — il suo token è già
+            // fresco e questo log è innocuo.)
+            CoreLog.keychain.error("[CRED] self-refresh: write-back fallito dopo rotazione → la CLI potrebbe richiedere ri-login")
+        } else {
+            // Nessuna rotazione: il refresh_token della CLI è ancora valido, nessun rischio per la CLI.
+            CoreLog.keychain.info("[CRED] self-refresh: write-back fallito ma senza rotazione (CLI resta valida)")
+        }
+
+        // 4) Read-through cache aggiornata. Owner resta .claudeCLI: l'item condiviso ora è fresco.
+        cachedCredentials = CredentialRecord(
+            credentials: refreshed, owner: .claudeCLI, source: .claudeKeychain, accountLabel: account)
+        return refreshed
     }
 
     // MARK: - Mapping
