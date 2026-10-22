@@ -46,7 +46,6 @@ ClaudeBar can read Claude Code's shared credentials. An explicit **Reconnect** a
 ## Development and license
 
 - [Development setup, checks, and packaging](docs/DEVELOPMENT.md)
-- [Architecture notes](CLAUDE.md)
 - [Source code](Sources/)
 
 Source is available under [PolyForm Noncommercial 1.0.0](LICENSE). See that file for the permitted uses and restrictions.

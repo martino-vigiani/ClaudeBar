@@ -12,7 +12,7 @@ The package has no third-party Swift dependencies and requires Swift 6.2.
 | `ClaudeBarApp` | AppKit and SwiftUI menu bar app, settings, file watching, and refresh scheduling |
 | `ClaudeBarCLI` | Internal inspection tool for limits and transcript reports |
 
-Keep parsing and provider requests out of the UI. See [Package.swift](../Package.swift) and [architecture notes](../CLAUDE.md).
+Keep parsing and provider requests out of the UI. See [Package.swift](../Package.swift) for the targets.
 
 ## Checks
 
@@ -60,4 +60,4 @@ App-owned provider secrets use the Keychain. Analytics caches and pricing overri
 
 Retain the [license](../LICENSE), the CodexBar design attribution, and Simple Icons attribution when sharing changes. CodexBar is MIT-licensed; the original project records the provider glyphs as CC0.
 
-Before proposing a change, run the relevant tests and describe separately any provider or UI checks you performed. This repository does not have a dedicated contribution guide; its existing architectural notes are in [CLAUDE.md](../CLAUDE.md).
+Before proposing a change, run the relevant tests and describe separately any provider or UI checks you performed. This repository does not have a dedicated contribution guide.

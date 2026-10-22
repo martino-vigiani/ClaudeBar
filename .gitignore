@@ -24,3 +24,8 @@ Assets/AppIcon-masked.png
 # Xcode user data (se in futuro si apre il package in Xcode)
 xcuserdata/
 *.xcuserstate
+
+# Note e piani degli agenti: restano sul Mac, non nel repo pubblico
+CLAUDE.md
+.subralabs/
+docs/plan/
