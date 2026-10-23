@@ -6,7 +6,7 @@ import FoundationNetworking
 // Aggregatore Cursor: `usage-summary` (+ identità best-effort) → `ProviderSnapshot`.
 // La logica di parsing/mapping è PURA (`makeSnapshot`) e testabile senza rete.
 //
-// MAPPING al modello unificato (vedi docs/plan/mp/prov-gemini-cursor.md §2.4 / §5):
+// MAPPING al modello unificato:
 // - windows[0] = "Total" del piano → contenitore `.sevenDay` (NON è una settimana: è la finestra del
 //   ciclo di fatturazione mensile; `PaceWindowKind` oggi ha solo i 4 case Claude, quindi riusiamo
 //   il contenitore più ampio. `resetsAt = billingCycleEnd`, `pace = nil` perché il pace lineare di

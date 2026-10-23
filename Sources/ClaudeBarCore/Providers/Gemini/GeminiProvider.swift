@@ -1,7 +1,7 @@
 import Foundation
 
-// `GeminiProvider`: provider a LIMITI via OAuth della Gemini CLI. Decisione utente
-// (docs/plan/mp/DECISIONS.md §Addendum): Gemini = OAuth CLI (~/.gemini/oauth_creds.json) → quote
+// `GeminiProvider`: provider a LIMITI via OAuth della Gemini CLI.
+// Gemini = OAuth CLI (~/.gemini/oauth_creds.json) → quote
 // giornaliere per-modello (layout limiti), NON API key (la key Google AI Studio non espone usage).
 //
 // Disponibilità: se la Gemini CLI non è loggata (nessuna cred OAuth) o è in modalità api-key/

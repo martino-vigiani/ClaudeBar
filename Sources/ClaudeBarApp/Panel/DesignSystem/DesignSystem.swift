@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Design System (DS)
 //
-// Token di design del pannello ClaudeBar (rif. docs/plan/03-design.md §2 e §8).
+// Token di design del pannello ClaudeBar.
 // Tutto qui dentro è puramente presentazionale: spaziatura, raggi, dimensioni,
 // tipografia e — soprattutto — la scala di colore SEMANTICA basata sul % USATO.
 //
